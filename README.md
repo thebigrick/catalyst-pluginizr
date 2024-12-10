@@ -18,7 +18,7 @@
 ## Introduction
 
 **@thebigrick/catalyst-pluginizr** is a drop-in pluginization system designed specifically
-for [Catalyst (BigCommerce)](https://developer.bigcommerce.com/). It provides a flexible and extensible framework to
+for [Catalyst (BigCommerce)](https://www.catalyst.dev/). It provides a flexible and extensible framework to
 enhance, override, or augment functionality at multiple integration points within a Catalyst-based application.
 
 With this tool, you can:
@@ -44,12 +44,14 @@ the final and some features may not be fully implemented.
 
 1. **Add the package**:  
    Install the `@thebigrick/catalyst-pluginizr` package inside your `packages` directory:
+
    ```bash
    cd path-to-catalyst/packages
    git clone https://github.com/thebigrick/catalyst-pluginizr.git
    ```
 2. **Enable `plugins/*` in the pnpm workspace**:  
    In your `pnpm-workspace.yaml`, add the `plugins/*` pattern so that it recognizes your plugin workspace:
+
    ```yaml
    packages:
      - core

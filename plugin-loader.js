@@ -1,6 +1,6 @@
 /**
- * @fileoverview A webpack loader that wraps React components and functions with appropriate plugin systems.
- * React components are wrapped with withPluginsFC while other functions or values use withPluginsFn.
+ * @fileoverview A webpack loader that wraps React components and exported values with appropriate plugin systems.
+ * React components are wrapped with withPluginsFC while other values (functions, classes, arrays, objects, strings, numbers, etc.) use withPluginsFn.
  * @module @thebigrick/catalyst-pluginizr
  */
 
@@ -11,14 +11,13 @@ const t = require('@babel/types');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const findUpDirectoriesCache = [];
 const packagesNameCache = {};
 const tsConfigBaseUrlCache = {};
 
 /**
- * Determines if a function node represents a React component by checking for JSX elements
- * @param {Object} funcNode - The function node to analyze
- * @returns {boolean} True if the function contains JSX elements
+ * Determines if a function node represents a React component by checking for JSX elements.
+ * @param {Object} funcNode - The function node to analyze.
+ * @returns {boolean} True if the function contains JSX elements.
  */
 const isReactComponentFunction = (funcNode) => {
   let hasJSX = false;
@@ -54,26 +53,18 @@ const isReactComponentFunction = (funcNode) => {
 };
 
 /**
- * Searches for a file by walking up directory tree from a starting point
- * @param {string} filename - The name of the file to find
- * @param {string} startDir - The directory to start searching from
- * @returns {string|null} The full path to the found file, or null if not found
+ * Searches for a file by walking up the directory tree from a starting point.
+ * @param {string} filename - The name of the file to find.
+ * @param {string} startDir - The directory to start searching from.
+ * @returns {string|null} The full path to the found file, or null if not found.
  */
 const findUp = (filename, startDir) => {
   let dir = startDir;
-
-  const candidatePath = findUpDirectoriesCache.find((cachedDir) => startDir.startsWith(cachedDir));
-
-  if (candidatePath) {
-    return path.join(candidatePath, filename);
-  }
 
   while (dir !== path.parse(dir).root) {
     const candidate = path.join(dir, filename);
 
     if (fs.existsSync(candidate)) {
-      findUpDirectoriesCache.push(dir);
-
       return candidate;
     }
 
@@ -84,9 +75,9 @@ const findUp = (filename, startDir) => {
 };
 
 /**
- * Extracts package name from package.json file
- * @param {string} packageJsonPath - Path to package.json file
- * @returns {string} Package name or 'unknown-package' if not found
+ * Extracts package name from package.json file.
+ * @param {string} packageJsonPath - Path to package.json file.
+ * @returns {string} Package name or 'unknown-package' if not found.
  */
 const getPackageName = (packageJsonPath) => {
   if (!packagesNameCache[packageJsonPath]) {
@@ -99,9 +90,9 @@ const getPackageName = (packageJsonPath) => {
 };
 
 /**
- * Gets baseUrl from tsconfig.json file
- * @param {string|null} tsconfigPath - Path to tsconfig.json file
- * @returns {string|null} baseUrl from compiler options or null if not found
+ * Gets baseUrl from tsconfig.json file.
+ * @param {string|null} tsconfigPath - Path to tsconfig.json file.
+ * @returns {string|null} baseUrl from compiler options or null if not found.
  */
 const getBaseUrl = (tsconfigPath) => {
   if (!tsconfigPath) return null;
@@ -116,43 +107,42 @@ const getBaseUrl = (tsconfigPath) => {
 };
 
 /**
- * Removes file extension from path
- * @param {string} filePath - File path with extension
- * @returns {string} File path without extension
+ * Removes file extension from path.
+ * @param {string} filePath - File path with extension.
+ * @returns {string} File path without extension.
  */
 const removeExtension = (filePath) => filePath.replace(/\.[jt]sx?$/, '');
 
 /**
- * Calculates relative path without baseUrl
- * @param {string} fileFullPath - Absolute file path
- * @param {string} projectDir - Project root directory
- * @param {string|null} baseUrl - Base URL from tsconfig
- * @returns {string} Relative path using forward slashes
+ * Calculates relative path without baseUrl.
+ * @param {string} fileFullPath - Absolute file path.
+ * @param {string} projectDir - Project root directory.
+ * @param {string|null} baseUrl - Base URL from tsconfig.
+ * @returns {string} Relative path using forward slashes.
  */
 const relativePathWithoutBaseUrl = (fileFullPath, projectDir, baseUrl) => {
-  const relativeToProject = path.relative(path.join(projectDir, baseUrl || '.'), fileFullPath);
+  const relativeToProject = path.relative(path.join(projectDir, baseUrl || ''), fileFullPath);
 
   return relativeToProject.split(path.sep).join('/');
 };
 
 /**
- * Gets project root directory from package.json location
- * @param {string} packageJsonPath - Path to package.json
- * @returns {string} Project root directory
+ * Gets project root directory from package.json location.
+ * @param {string} packageJsonPath - Path to package.json.
+ * @returns {string} Project root directory.
  */
 const getProjectRootFromPackageJson = (packageJsonPath) => path.dirname(packageJsonPath);
 
 /**
- * Generates component code path for plugins
- * @param {string} filename - Component file name
- * @param {string} identifierName - Component identifier name
- * @param {boolean} [isDefaultExport=false] - Whether component is default export
- * @returns {string} Formatted component code path
- * @throws {Error} If package.json is not found
+ * Generates component code path for plugins.
+ * @param {string} filename - Component file name.
+ * @param {string} identifierName - Component identifier name.
+ * @param {boolean} [isDefaultExport=false] - Whether component is default export.
+ * @returns {string} Formatted component code path.
+ * @throws {Error} If package.json is not found.
  */
 const getComponentCode = (filename, identifierName, isDefaultExport = false) => {
   const absolutePath = path.isAbsolute(filename) ? filename : path.resolve(process.cwd(), filename);
-
   const packageJsonPath = findUp('package.json', path.dirname(absolutePath));
 
   if (!packageJsonPath) {
@@ -186,8 +176,8 @@ const getComponentCode = (filename, identifierName, isDefaultExport = false) => 
 };
 
 /**
- * Normalizes function body to ensure it has a block statement
- * @param {Object} funcNode - Function node to normalize
+ * Normalizes function body to ensure it has a block statement.
+ * @param {Object} funcNode - Function node to normalize.
  * @returns {void}
  */
 const normalizeFunctionBody = (funcNode) => {
@@ -200,61 +190,55 @@ const normalizeFunctionBody = (funcNode) => {
 };
 
 /**
- * Wraps a function with appropriate plugin wrapper based on whether it's a React component
- * @param {Object} funcNode - Function node to wrap
- * @param {string} identifierName - Function identifier name
- * @param {string} filename - File name
- * @param {boolean} [isDefaultExport=false] - Whether function is default export
- * @returns {Object} Wrapped function node
+ * Wraps an exported value (function or otherwise) with the appropriate plugin wrapper.
+ * Functions are wrapped as before:
+ * - If it's a React component, use withPluginsFC.
+ * - Otherwise, use withPluginsFn.
+ * Non-function values (classes, arrays, objects, strings, numbers, etc.) are always wrapped with withPluginsFn.
+ * @param {Object} node - The AST node of the exported item.
+ * @param {string} identifierName - The identifier name of the variable or function being exported.
+ * @param {string} filename - The source file path.
+ * @param {boolean} [isDefaultExport=false] - True if it is a default export.
+ * @returns {Object} The transformed AST node.
  */
-const wrapFunctionWithPlugins = (funcNode, identifierName, filename, isDefaultExport = false) => {
-  const cloned = t.cloneNode(funcNode, true);
-  const isReactComponent = isReactComponentFunction(funcNode);
-
-  normalizeFunctionBody(cloned);
-
+const wrapExportedValue = (node, identifierName, filename, isDefaultExport = false) => {
   const componentCode = getComponentCode(filename, identifierName, isDefaultExport);
-  const wrapperName = isReactComponent ? 'withPluginsFC' : 'withPluginsFn';
 
-  return t.callExpression(t.identifier(wrapperName), [
-    t.stringLiteral(componentCode),
-    t.functionExpression(
-      t.identifier(identifierName),
-      cloned.params,
-      cloned.body,
-      cloned.generator,
-      cloned.async,
-    ),
-  ]);
+  // Check if it is a function
+  const isFunctionNode =
+    t.isFunctionExpression(node) ||
+    t.isArrowFunctionExpression(node) ||
+    t.isFunctionDeclaration(node);
+
+  if (isFunctionNode) {
+    const cloned = t.cloneNode(node, true);
+    const isReactComponent = isReactComponentFunction(node);
+
+    normalizeFunctionBody(cloned);
+
+    const wrapperName = isReactComponent ? 'withPluginsFC' : 'withPluginsFn';
+
+    return t.callExpression(t.identifier(wrapperName), [
+      t.stringLiteral(componentCode),
+      t.functionExpression(
+        t.identifier(identifierName),
+        cloned.params,
+        cloned.body,
+        cloned.generator,
+        cloned.async,
+      ),
+    ]);
+  }
+
+  // Not a function, wrap with withPluginsFn
+  return t.callExpression(t.identifier('withPluginsFn'), [t.stringLiteral(componentCode), node]);
 };
 
 /**
- * Wraps a non-function value with withPluginsFn
- * @param {Object} valueNode - The value node (string, number, object, array, etc.)
- * @param {string} identifierName - The identifier name
- * @param {string} filename - The file name
- * @param {boolean} [isDefaultExport=false] - Whether it's a default export
- * @returns {Object} Wrapped value node
- */
-const wrapValueWithPlugins = (valueNode, identifierName, filename, isDefaultExport = false) => {
-  const componentCode = getComponentCode(filename, identifierName, isDefaultExport);
-  // We create a function that returns the value
-  const wrapperFunction = t.arrowFunctionExpression(
-    [],
-    t.blockStatement([t.returnStatement(valueNode)]),
-  );
-
-  return t.callExpression(t.identifier('withPluginsFn'), [
-    t.stringLiteral(componentCode),
-    wrapperFunction,
-  ]);
-};
-
-/**
- * Wraps exported functions or values with plugins
- * @param {string} code - Source code
- * @param {string} filename - File name
- * @returns {string} Transformed code with wrapped exports
+ * Wraps exported values with plugins.
+ * @param {string} code - The source code.
+ * @param {string} filename - The file name.
+ * @returns {string} The transformed code with wrapped exports.
  */
 const wrapExportedFunctions = (code, filename) => {
   const ast = parse(code, {
@@ -278,7 +262,7 @@ const wrapExportedFunctions = (code, filename) => {
     },
   });
 
-  // Add necessary imports
+  // Add necessary imports if not present
   const importSpecifiers = [];
 
   if (!withPluginsFCImported) {
@@ -299,48 +283,6 @@ const wrapExportedFunctions = (code, filename) => {
     );
   }
 
-  const handleVariableDeclaration = (declarations, exportPath) => {
-    let modified = false;
-
-    for (const decl of declarations) {
-      const { id, init } = decl;
-
-      if (t.isIdentifier(id) && init) {
-        // Direct function check
-        if (t.isArrowFunctionExpression(init) || t.isFunctionExpression(init)) {
-          decl.init = wrapFunctionWithPlugins(init, id.name, filename);
-          modified = true;
-        }
-        // Check for wrapped functions inside call expressions (like cache(async () => {...}))
-        else if (t.isCallExpression(init) && init.arguments.length > 0) {
-          const firstArg = init.arguments[0];
-
-          if (t.isArrowFunctionExpression(firstArg) || t.isFunctionExpression(firstArg)) {
-            init.arguments[0] = wrapFunctionWithPlugins(firstArg, id.name, filename);
-            modified = true;
-          } else {
-            // Not a function, wrap the whole init anyway
-            init.arguments[0] = wrapValueWithPlugins(firstArg, id.name, filename);
-            modified = true;
-          }
-        } else {
-          // Not a function at all, wrap as value
-          decl.init = wrapValueWithPlugins(init, id.name, filename);
-          modified = true;
-        }
-      }
-    }
-
-    if (modified) {
-      exportPath.replaceWith(
-        t.exportNamedDeclaration(
-          t.variableDeclaration(exportPath.node.declaration.kind, declarations),
-          [],
-        ),
-      );
-    }
-  };
-
   traverse(ast, {
     ExportNamedDeclaration: (declPath) => {
       const { node } = declPath;
@@ -348,7 +290,7 @@ const wrapExportedFunctions = (code, filename) => {
 
       if (decl && t.isFunctionDeclaration(decl) && decl.id) {
         const funcName = decl.id.name;
-        const wrapped = wrapFunctionWithPlugins(decl, funcName, filename);
+        const wrapped = wrapExportedValue(decl, funcName, filename);
 
         declPath.replaceWith(
           t.exportNamedDeclaration(
@@ -356,8 +298,28 @@ const wrapExportedFunctions = (code, filename) => {
             [],
           ),
         );
+        declPath.skip(); // Prevent re-traversal of the replaced node
       } else if (decl && t.isVariableDeclaration(decl)) {
-        handleVariableDeclaration(decl.declarations, declPath);
+        const { declarations } = decl;
+        let modified = false;
+
+        for (const d of declarations) {
+          const { id, init } = d;
+
+          if (t.isIdentifier(id) && init) {
+            const wrapped = wrapExportedValue(init, id.name, filename);
+
+            d.init = wrapped;
+            modified = true;
+          }
+        }
+
+        if (modified) {
+          declPath.replaceWith(
+            t.exportNamedDeclaration(t.variableDeclaration(decl.kind, declarations), []),
+          );
+          declPath.skip(); // Prevent re-traversal of the replaced node
+        }
       }
     },
     ExportDefaultDeclaration: (declPath) => {
@@ -365,69 +327,63 @@ const wrapExportedFunctions = (code, filename) => {
       const baseName = path
         .basename(filename)
         .replace(/\.[jt]sx?$/, '')
-        .replace(/[^a-zA-Z0-9]/g, ''); // Sanitize the name
+        .replace(/[^a-zA-Z0-9]/g, '');
       const funcName = `${baseName}Default`;
 
-      if (t.isFunctionDeclaration(decl)) {
-        const wrapped = wrapFunctionWithPlugins(decl, funcName, filename, true);
+      if (
+        t.isFunctionDeclaration(decl) ||
+        t.isArrowFunctionExpression(decl) ||
+        t.isFunctionExpression(decl)
+      ) {
+        const wrapped = wrapExportedValue(decl, funcName, filename, true);
 
         declPath.replaceWith(t.exportDefaultDeclaration(wrapped));
-      } else if (t.isArrowFunctionExpression(decl) || t.isFunctionExpression(decl)) {
-        const wrapped = wrapFunctionWithPlugins(decl, funcName, filename, true);
-
-        declPath.replaceWith(t.exportDefaultDeclaration(wrapped));
+        declPath.skip(); // Prevent re-traversal of the replaced node
       } else if (t.isIdentifier(decl)) {
         const name = decl.name;
         const binding = declPath.scope.getBinding(name);
 
         if (binding && binding.path.isVariableDeclarator()) {
           const init = binding.path.node.init;
+          const wrapped = wrapExportedValue(init, name, filename, true);
 
-          if (init && (t.isArrowFunctionExpression(init) || t.isFunctionExpression(init))) {
-            const wrapped = wrapFunctionWithPlugins(init, name, filename, true);
-
-            binding.path.get('init').replaceWith(wrapped);
-          } else if (init) {
-            // Non-function default export
-            const wrapped = wrapValueWithPlugins(init, name, filename, true);
-
-            binding.path.get('init').replaceWith(wrapped);
-          }
+          binding.path.get('init').replaceWith(wrapped);
+          declPath.skip(); // Prevent re-traversal of the replaced node
         }
       } else {
-        // Direct non-function default export (e.g. export default 42;)
-        const wrapped = wrapValueWithPlugins(decl, funcName, filename, true);
+        // The default export is not a function or an identifier; treat it as a value
+        const wrapped = wrapExportedValue(decl, funcName, filename, true);
 
         declPath.replaceWith(t.exportDefaultDeclaration(wrapped));
+        declPath.skip(); // Prevent re-traversal of the replaced node
       }
     },
   });
+
+  if (filename.includes('reader.ts')) {
+    console.log(generate(ast, {}, code).code);
+  }
 
   return generate(ast, {}, code).code;
 };
 
 /**
- * Webpack loader that wraps functions and non-function exports with appropriate plugins
- * @param {string} inputCode - Source code to transform
- * @returns {string} Transformed code
+ * Webpack loader that wraps exported items with appropriate plugins.
+ * Functions and React components are handled as before.
+ * Non-function exports (classes, arrays, objects, strings, numbers, etc.) are also wrapped with withPluginsFn.
+ * @param {string} inputCode - The source code to transform.
+ * @returns {string} The transformed code.
  */
 function pluginizerModifier(inputCode) {
-  const resourcePath = this.resourcePath;
-  const resourceBasename = path.basename(resourcePath);
-
-  const normalizedResourcePath = resourcePath.split(path.sep).join('/');
-
   if (
     inputCode.search(/^['"]use\s*no-plugins['"]\s*;?\s*$/) !== -1 ||
-    normalizedResourcePath.includes('/.next/') ||
-    normalizedResourcePath.includes('/node_modules/') ||
-    normalizedResourcePath.includes('/packages/catalyst-pluginizr/') ||
-    resourceBasename === 'middleware.ts'
+    this.resourcePath.includes('/node_modules/') ||
+    this.resourcePath.includes('/packages[/\\]catalyst-pluginizr/')
   ) {
     return inputCode;
   }
 
-  return wrapExportedFunctions(inputCode, resourcePath);
+  return wrapExportedFunctions(inputCode, this.resourcePath);
 }
 
 module.exports = pluginizerModifier;

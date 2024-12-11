@@ -21,12 +21,14 @@ export type PluginWrapperFn<TSourceFn extends AnyValue = AnyValue> = TSourceFn e
 
 export interface PluginFC<TSourceComponent extends AnyWrappedFC = AnyWrappedFC> {
   component: string;
+  sortOrder?: number;
   name: string;
   wrap: PluginWrapperFC<TSourceComponent>;
 }
 
 export interface PluginFn<TSourceFn extends AnyValue = AnyValue> {
   functionId: string;
+  sortOrder?: number;
   name: string;
   wrap: PluginWrapperFn<TSourceFn>;
 }

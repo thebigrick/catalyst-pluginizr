@@ -360,10 +360,6 @@ const wrapExportedFunctions = (code, filename) => {
     },
   });
 
-  if (filename.includes('reader.ts')) {
-    console.log(generate(ast, {}, code).code);
-  }
-
   return generate(ast, {}, code).code;
 };
 

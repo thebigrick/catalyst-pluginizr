@@ -69,11 +69,8 @@ const withCatalystPluginizr = (nextConfig: NextConfig): NextConfig => {
       };
 
       config.module.rules.unshift({
-        test: /\.tsx$/,
-        include: [
-          path.resolve(getCoreBasePath(), 'app'),
-          path.resolve(getCoreBasePath(), 'components'),
-        ],
+        test: /\.tsx?$/,
+        include: [getCoreBasePath()],
         exclude: [/node_modules/],
         use: [
           {

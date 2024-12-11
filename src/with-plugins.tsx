@@ -1,5 +1,5 @@
 import { getFcPlugins, getFnPlugins } from './registry';
-import { AnyWrappedFC, AnyWrappedFn, PluginWrapperFC } from './types';
+import { AnyValue, AnyWrappedFC, PluginWrapperFC } from './types';
 
 /**
  * Higher-order component that wraps a component with plugins.
@@ -37,21 +37,34 @@ export const withPluginsFC = <P extends AnyWrappedFC = AnyWrappedFC>(
 /**
  * Higher-order function that wraps a function with plugins.
  * @param {string} functionId - Unique identifier for the function
- * @param {Function} wrappedFn - The function to be wrapped
+ * @param {Function} wrapped - The function to be wrapped
  * @returns {Function} - The enhanced function wrapped with all applicable plugins
  */
-export const withPluginsFn = <T extends AnyWrappedFn = AnyWrappedFn>(
-  functionId: string,
-  wrappedFn: T,
-): T => {
+export const withPluginsFn = <T extends AnyValue = AnyValue>(functionId: string, wrapped: T): T => {
   const plugins = getFnPlugins(functionId);
 
   if (!plugins.length) {
-    return wrappedFn;
+    return wrapped;
   }
 
-  return plugins.reduce<T>((enhancedFn, plugin) => {
-    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions,@typescript-eslint/no-unsafe-return,@typescript-eslint/no-unsafe-argument
-    return ((...args) => plugin.wrap(enhancedFn, ...args)) as T;
-  }, wrappedFn);
+  if (typeof wrapped === 'function') {
+    return plugins.reduce<T>((enhancedFn, plugin) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      type Args = T extends (...args: infer P) => any ? P : never;
+
+      // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+      return ((...args: Args) => {
+        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions,@typescript-eslint/no-explicit-any
+        const wrappedFn = enhancedFn as (...a: Args) => any;
+
+        // @ts-expect-error for spread operator
+        return plugin.wrap(wrappedFn, ...args);
+      }) as T;
+    }, wrapped);
+  }
+
+  return plugins.reduce<T>((enhancedValue, plugin) => {
+    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+    return plugin.wrap(enhancedValue) as T;
+  }, wrapped);
 };

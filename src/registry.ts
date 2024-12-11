@@ -1,4 +1,4 @@
-import { AnyWrappedFC, AnyWrappedFn, PluginFC, PluginFn } from './types';
+import { AnyValue, AnyWrappedFC, PluginFC, PluginFn } from './types';
 
 const fcPlugins: Record<string, PluginFC[]> = {};
 const fnPlugins: Record<string, PluginFn[]> = {};
@@ -11,7 +11,7 @@ export const registerFcPlugin = <TSourceComponent extends AnyWrappedFC = AnyWrap
   fcPlugins[plugin.component].push(plugin as PluginFC);
 };
 
-export const registerFnPlugin = <TSourceFn extends AnyWrappedFn = AnyWrappedFn>(
+export const registerFnPlugin = <TSourceFn extends AnyValue = AnyValue>(
   plugin: PluginFn<TSourceFn>,
 ) => {
   fnPlugins[plugin.functionId] ??= [];
@@ -25,7 +25,7 @@ export const getFcPlugins = <TSourceComponent extends AnyWrappedFC>(
   return fcPlugins[component] ?? [];
 };
 
-export const getFnPlugins = <TSourceFn extends AnyWrappedFn>(
+export const getFnPlugins = <TSourceFn extends AnyValue>(
   functionId: string,
 ): Array<PluginFn<TSourceFn>> => {
   return fnPlugins[functionId] ?? [];

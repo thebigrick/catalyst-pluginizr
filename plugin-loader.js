@@ -1,6 +1,6 @@
 /**
  * @fileoverview A webpack loader that wraps React components and functions with appropriate plugin systems.
- * React components are wrapped with withPluginsFC while other functions use withPluginsFn.
+ * React components are wrapped with withPluginsFC while other functions or values use withPluginsFn.
  * @module @thebigrick/catalyst-pluginizr
  */
 
@@ -62,7 +62,7 @@ const isReactComponentFunction = (funcNode) => {
 const findUp = (filename, startDir) => {
   let dir = startDir;
 
-  const candidatePath = findUpDirectoriesCache.find((entry) => startDir.startsWith(entry.dir));
+  const candidatePath = findUpDirectoriesCache.find((cachedDir) => startDir.startsWith(cachedDir));
 
   if (candidatePath) {
     return path.join(candidatePath, filename);
@@ -130,7 +130,7 @@ const removeExtension = (filePath) => filePath.replace(/\.[jt]sx?$/, '');
  * @returns {string} Relative path using forward slashes
  */
 const relativePathWithoutBaseUrl = (fileFullPath, projectDir, baseUrl) => {
-  const relativeToProject = path.relative(path.join(projectDir, baseUrl || ''), fileFullPath);
+  const relativeToProject = path.relative(path.join(projectDir, baseUrl || '.'), fileFullPath);
 
   return relativeToProject.split(path.sep).join('/');
 };
@@ -216,8 +216,6 @@ const wrapFunctionWithPlugins = (funcNode, identifierName, filename, isDefaultEx
   const componentCode = getComponentCode(filename, identifierName, isDefaultExport);
   const wrapperName = isReactComponent ? 'withPluginsFC' : 'withPluginsFn';
 
-  // console.log('componentCode', componentCode);
-
   return t.callExpression(t.identifier(wrapperName), [
     t.stringLiteral(componentCode),
     t.functionExpression(
@@ -231,7 +229,29 @@ const wrapFunctionWithPlugins = (funcNode, identifierName, filename, isDefaultEx
 };
 
 /**
- * Wraps exported functions with plugins
+ * Wraps a non-function value with withPluginsFn
+ * @param {Object} valueNode - The value node (string, number, object, array, etc.)
+ * @param {string} identifierName - The identifier name
+ * @param {string} filename - The file name
+ * @param {boolean} [isDefaultExport=false] - Whether it's a default export
+ * @returns {Object} Wrapped value node
+ */
+const wrapValueWithPlugins = (valueNode, identifierName, filename, isDefaultExport = false) => {
+  const componentCode = getComponentCode(filename, identifierName, isDefaultExport);
+  // We create a function that returns the value
+  const wrapperFunction = t.arrowFunctionExpression(
+    [],
+    t.blockStatement([t.returnStatement(valueNode)]),
+  );
+
+  return t.callExpression(t.identifier('withPluginsFn'), [
+    t.stringLiteral(componentCode),
+    wrapperFunction,
+  ]);
+};
+
+/**
+ * Wraps exported functions or values with plugins
  * @param {string} code - Source code
  * @param {string} filename - File name
  * @returns {string} Transformed code with wrapped exports
@@ -282,7 +302,6 @@ const wrapExportedFunctions = (code, filename) => {
   const handleVariableDeclaration = (declarations, exportPath) => {
     let modified = false;
 
-    // eslint-disable-next-line no-restricted-syntax
     for (const decl of declarations) {
       const { id, init } = decl;
 
@@ -292,14 +311,22 @@ const wrapExportedFunctions = (code, filename) => {
           decl.init = wrapFunctionWithPlugins(init, id.name, filename);
           modified = true;
         }
-        // Check for wrapped functions (like cache(async () => {...}))
+        // Check for wrapped functions inside call expressions (like cache(async () => {...}))
         else if (t.isCallExpression(init) && init.arguments.length > 0) {
           const firstArg = init.arguments[0];
 
           if (t.isArrowFunctionExpression(firstArg) || t.isFunctionExpression(firstArg)) {
             init.arguments[0] = wrapFunctionWithPlugins(firstArg, id.name, filename);
             modified = true;
+          } else {
+            // Not a function, wrap the whole init anyway
+            init.arguments[0] = wrapValueWithPlugins(firstArg, id.name, filename);
+            modified = true;
           }
+        } else {
+          // Not a function at all, wrap as value
+          decl.init = wrapValueWithPlugins(init, id.name, filename);
+          modified = true;
         }
       }
     }
@@ -360,8 +387,18 @@ const wrapExportedFunctions = (code, filename) => {
             const wrapped = wrapFunctionWithPlugins(init, name, filename, true);
 
             binding.path.get('init').replaceWith(wrapped);
+          } else if (init) {
+            // Non-function default export
+            const wrapped = wrapValueWithPlugins(init, name, filename, true);
+
+            binding.path.get('init').replaceWith(wrapped);
           }
         }
+      } else {
+        // Direct non-function default export (e.g. export default 42;)
+        const wrapped = wrapValueWithPlugins(decl, funcName, filename, true);
+
+        declPath.replaceWith(t.exportDefaultDeclaration(wrapped));
       }
     },
   });
@@ -370,20 +407,27 @@ const wrapExportedFunctions = (code, filename) => {
 };
 
 /**
- * Webpack loader that wraps functions with appropriate plugins
+ * Webpack loader that wraps functions and non-function exports with appropriate plugins
  * @param {string} inputCode - Source code to transform
  * @returns {string} Transformed code
  */
 function pluginizerModifier(inputCode) {
+  const resourcePath = this.resourcePath;
+  const resourceBasename = path.basename(resourcePath);
+
+  const normalizedResourcePath = resourcePath.split(path.sep).join('/');
+
   if (
     inputCode.search(/^['"]use\s*no-plugins['"]\s*;?\s*$/) !== -1 ||
-    this.resourcePath.includes('/node_modules/') ||
-    this.resourcePath.includes('/packages[/\\]catalyst-pluginizr/')
+    normalizedResourcePath.includes('/.next/') ||
+    normalizedResourcePath.includes('/node_modules/') ||
+    normalizedResourcePath.includes('/packages/catalyst-pluginizr/') ||
+    resourceBasename === 'middleware.ts'
   ) {
     return inputCode;
   }
 
-  return wrapExportedFunctions(inputCode, this.resourcePath);
+  return wrapExportedFunctions(inputCode, resourcePath);
 }
 
 module.exports = pluginizerModifier;

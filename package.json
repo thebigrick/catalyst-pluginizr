@@ -7,7 +7,6 @@
   "scripts": {
     "setup": "npx tsx src/scripts/setup.ts",
     "dev": "npx tsx src/scripts/run-dev.ts",
-    "clean": "npx tsx src/scripts/clean.ts",
     "typecheck": "tsc --noEmit"
   },
   "author": "Riccardo Tempesta <riccardo.tempesta@bigcommerce.com>",
@@ -24,7 +23,6 @@
     "@babel/parser": "^7.26.3",
     "@babel/traverse": "^7.26.3",
     "@babel/types": "^7.26.3",
-    "@babel/generator": "^7.26.3",
-    "tsup": "^8.3.5"
+    "@babel/generator": "^7.26.3"
   }
 }

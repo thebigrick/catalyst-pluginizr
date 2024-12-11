@@ -235,8 +235,9 @@ registerFnPlugin<typeof defaultCurrency>({
 - `functionId` or `component`: Must match the original function or component you want to wrap.
   Use the `packageName/path/to/item:itemName` format (e.g., `@bigcommerce/catalyst-core/components/header:Header`)
     - `itemName`: is the export name (omit if default export).
-    - `packageName` is the Package name from `package.json` (e.g., `@bigcommerce/catalyst-core`).
-    - `path/to/item` is the path to the item from the package source code root (e.g., `components/header`).
+    - `sortOrder`: is the order in which the plugin should run (lower values run first).
+    - `packageName`: is the Package name from `package.json` (e.g., `@bigcommerce/catalyst-core`).
+    - `path/to/item`: is the path to the item from the package source code root (e.g., `components/header`).
 
 ## Additional Notes
 

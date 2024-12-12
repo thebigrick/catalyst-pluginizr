@@ -20,7 +20,14 @@
     "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo.json",
     "resolveJsonModule": true,
     "jsx": "react",
-    "paths": {}
+    "paths": {
+      "@test/test2/*": [
+        "../../../plugins/test2/src/*"
+      ],
+      "@test/test3/*": [
+        "../../../plugins/test3/src/*"
+      ]
+    }
   },
   "exclude": [
     "node_modules"

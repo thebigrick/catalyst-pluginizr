@@ -6,6 +6,9 @@ require('@bigcommerce/eslint-config/patch');
 /** @type {import('eslint').Linter.Config} */
 const config = {
   root: true,
+  env: {
+    jest: true,
+  },
   extends: [
     '@bigcommerce/catalyst/base',
     '@bigcommerce/catalyst/react',

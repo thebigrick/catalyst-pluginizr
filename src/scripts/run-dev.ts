@@ -10,7 +10,7 @@ const watchFiles = ['package.json', 'tsconfig.json', 'register-plugins.ts'];
  * Run the development environment
  * @returns {void}
  */
-const runDev = (): void => {
+export const runDev = (): void => {
   setupPlugins();
 
   const targetFolder = getPluginsBasePath();

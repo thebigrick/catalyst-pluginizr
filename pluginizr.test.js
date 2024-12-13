@@ -1,4 +1,5 @@
 const fs = require('node:fs');
+
 const pluginizr = require('./pluginizr');
 
 global.console.error = jest.fn();
@@ -186,7 +187,7 @@ export default myFunction;`;
       expect(res).toEqual(expectedCode);
     });
 
-    test('with: named export', () => {
+    test('with: named export on arrow function ', () => {
       const sampleCode = `
       export const myFunction = () => {
         console.log('Hello World');
@@ -197,6 +198,36 @@ export default myFunction;`;
 export const myFunction = withPluginsFn("test-package/../file:myFunction", () => {
   console.log('Hello World');
 });`;
+
+      const res = pluginizr(sampleCode, '/some/file.ts');
+
+      expect(res).toEqual(expectedCode);
+    });
+
+    test('with: named export on function ', () => {
+      const sampleCode = `
+      export function myFunction() {
+        console.log('Hello World');
+      }
+    `;
+
+      const expectedCode = `import { withPluginsFC, withPluginsFn } from "@thebigrick/catalyst-pluginizr";
+export const myFunction = withPluginsFn("test-package/../file:myFunction", function () {
+  console.log('Hello World');
+});`;
+
+      const res = pluginizr(sampleCode, '/some/file.ts');
+
+      expect(res).toEqual(expectedCode);
+    });
+
+    test('with: default export on anonymous value', () => {
+      const sampleCode = `
+        export default 5;
+      `;
+
+      const expectedCode = `import { withPluginsFC, withPluginsFn } from "@thebigrick/catalyst-pluginizr";
+export default withPluginsFn("test-package/../file", 5);`;
 
       const res = pluginizr(sampleCode, '/some/file.ts');
 

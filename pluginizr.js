@@ -238,7 +238,10 @@ const wrapExportedValue = (node, identifierName, filename, isDefaultExport = fal
  */
 const handleExport = (decl, filename, isDefaultExport) => {
   const nodeDecl = decl.node.declaration;
-  if (!nodeDecl) return;
+
+  if (!nodeDecl) {
+    return;
+  }
 
   const namedReference = nodeDecl.name;
 
@@ -293,7 +296,15 @@ const handleExport = (decl, filename, isDefaultExport) => {
     } else {
       const wrapped = wrapExportedValue(nodeDecl, funcName, filename, isDefaultExport);
 
-      decl.replaceWith(t.exportDefaultDeclaration(wrapped));
+      if (isDefaultExport) {
+        decl.replaceWith(t.exportDefaultDeclaration(wrapped));
+      } else {
+        const varDecl = t.variableDeclaration('const', [
+          t.variableDeclarator(t.identifier(nodeDecl.id?.name), wrapped),
+        ]);
+
+        decl.replaceWith(t.exportNamedDeclaration(varDecl, []));
+      }
     }
 
     decl.skip();

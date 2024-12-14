@@ -3,16 +3,24 @@
 ## Table of Contents
 
 - [Introduction](#introduction)
-- [BETA](#beta)
-- [Installation & Setup](#installation--setup)
-- [How It Works](#how-it-works)
-    - [Requirements for a Plugin](#requirements-for-a-plugin)
-- [Declaring Plugins](#declaring-plugins)
+- [Quick Start](#quick-start)
+    - [Prerequisites](#prerequisites)
+    - [Installation Steps](#installation-steps)
+- [Plugin Development Guide](#plugin-development-guide)
+    - [Basic Concepts](#basic-concepts)
+    - [Plugin Types](#plugin-types)
+    - [Creating Your First Plugin](#creating-your-first-plugin)
     - [Plugin Execution Order](#plugin-execution-order)
-    - [Example: Function Plugin](#example-function-plugin)
-    - [Example: Component Plugin](#example-component-plugin)
-    - [Example: Non-Function Values Plugin](#example-non-function-values-plugin)
     - [Naming Conventions](#naming-conventions)
+- [Examples](#examples)
+    - [Function Plugin](#function-plugin)
+    - [Component Plugin](#component-plugin)
+    - [Non-Function Values Plugin](#non-function-values-plugin)
+- [Technical Details](#technical-details)
+    - [Architecture Overview](#architecture-overview)
+    - [Build Time Optimization](#build-time-optimization)
+    - [Plugin Registration](#plugin-registration)
+    - [Runtime Architecture](#runtime-architecture)
 - [Additional Notes](#additional-notes)
 - [Contributing](#contributing)
 - [License](#license)
@@ -20,145 +28,275 @@
 ## Introduction
 
 **@thebigrick/catalyst-pluginizr** is a drop-in pluginization system designed specifically
-for [Catalyst (BigCommerce)](https://www.catalyst.dev/). It provides a flexible and extensible framework to
-enhance, override, or augment functionality at multiple integration points within a Catalyst-based application.
+for [Catalyst (BigCommerce)](https://www.catalyst.dev/). It enables developers to enhance, override, or augment
+functionality at multiple integration points within a Catalyst-based application without modifying core code.
 
 With this tool, you can:
 
-- **Extend UI Components:** Easily wrap existing React components — both on the server and client side — without
-  directly modifying their source code. Add extra markup, style, or logic around established components.
-- **Enrich Server Actions:** Intercept server actions and other functions to alter their behavior, input, or output.
-  This could mean adding logging, modifying parameters, or overriding return values.
-- **Integrate Third-Party Logic:** Inject external business rules, analytics, or A/B testing logic into any function or
-  component, improving maintainability and reducing code duplication.
+- **Extend UI Components:** Wrap existing React components with additional markup, styling, or logic
+- **Enrich Server Actions:** Intercept and modify server actions and other functions
+- **Integrate Third-Party Logic:** Inject external business rules, analytics, or A/B testing
 
-By adopting **@thebigrick/catalyst-pluginizr**, you streamline the development process, keeping your core code clean and
-stable while introducing changes via isolated, version-controlled plugins. As a result, developers can maintain a
-modular architecture that's easier to test, debug, and evolve over time.
+> **BETA Notice**: This package is currently in beta. While stable and functional, it may undergo changes before the
+> final release.
 
-## BETA
+## Quick Start
 
-This package must be still considered as a beta. While it is stable and functional, it may still undergo changes before
-the final and some features may not be fully implemented.
+### Prerequisites
 
-## Installation & Setup
+- A Catalyst-based project
+- Node.js and pnpm installed
+- Access to your project's `packages` directory
 
-1. **Add the package**:  
-   Install the `@thebigrick/catalyst-pluginizr` package inside your `packages` directory:
+### Installation Steps
 
-   ```bash
-   cd /path-to-catalyst/packages
-   git clone https://github.com/thebigrick/catalyst-pluginizr.git
-   ```
-2. **Add Catalyst Pluginizr as rependency to `core/package.json`**:
+1. **Clone the package:**
 
-   ```json
-   {
-     "...":  "...",
-     "dependencies": {
-       "...":  "...",
-       "@thebigrick/catalyst-pluginizr": "workspace:^",
-       "...":  "..."
-     },
-     "...":  "..."
-   }
-   ```
-3. **Enable `plugins/*` in the pnpm workspace**:  
-   In your `pnpm-workspace.yaml`, add the `plugins/*` pattern so that it recognizes your plugin workspace:
-
-   ```yaml
-   packages:
-     - core
-     - packages/*
-     - plugins/*
-   ```
-
-4. **Install deps**:
-   Run package install from the root of the project:
-
-   ```bash
-   cd /path-to-catalyst/
-   pnpm install
-   ```
-
-5. **Configure Next.js with Catalyst Pluginizr**:
-   In your `core/next.config.ts`, import and apply `withCatalystPluginizr` to your Next.js configuration just after the
-   `withNextIntl` call:
-
-   ```ts
-   ...
-
-   import { withCatalystPluginizr } from '@thebigrick/catalyst-pluginizr';
-    
-   ...
-   nextConfig = withNextIntl(nextConfig); // Search for this line
-   nextConfig = withCatalystPluginizr(nextConfig); // Add this line
-   ...
-   ```
-
-## How It Works
-
-Once the configuration is in place, you can develop your plugins by placing them inside the `plugins` directory. For
-example:
-
+```bash
+cd /path-to-catalyst/packages
+git clone https://github.com/thebigrick/catalyst-pluginizr.git
 ```
 
-plugins/
-my-plugin/
-src/
-register-plugins.ts
-plugins/
-test.tsx
-tsconfig.json
-package.json
+2. **Update your core dependencies:**
 
+```json
+{
+  "dependencies": {
+    "@thebigrick/catalyst-pluginizr": "workspace:^"
+  }
+}
 ```
 
-### Requirements for a Plugin
+3. **Enable plugins in workspace:**
 
-- TypeScript project: Each plugin must be a TypeScript project with a valid `tsconfig.json`.
-- `register-plugins.ts` file: Inside the plugin's src folder, create a file named `register-plugins.ts`. This file
-  should import and call `registerFnPlugin` and/or `registerFcPlugin` to declare plugins.
+```yaml
+# pnpm-workspace.yaml
+packages:
+  - core
+  - packages/*
+  - plugins/*
+```
 
-## Declaring Plugins
+4. **Configure Next.js:**
 
-You have three types of plugins:
+```typescript
+// core/next.config.ts
+import { withCatalystPluginizr } from '@thebigrick/catalyst-pluginizr';
 
-1. **Function Plugins** (`registerFnPlugin`):
-   Useful for wrapping or modifying server actions and other arbitrary functions.
+// Add after withNextIntl
+nextConfig = withNextIntl(nextConfig);
+nextConfig = withCatalystPluginizr(nextConfig);
+```
 
-2. **Component Plugins** (`registerFcPlugin`):
-   Ideal for wrapping React components. This lets you modify UI components without altering their source code directly.
+5. **Install dependencies:**
 
-3. **Non-Function Values** (`registerFnPlugin`):
-   Used for modifying static values like strings, numbers, or objects.
+```bash
+cd /path-to-catalyst
+pnpm install
+```
 
-Each plugin type supports multiple plugins on the same target through the `sortOrder` parameter, which determines the
-order of execution.
+## Plugin Development Guide
+
+### Basic Concepts
+
+Catalyst Pluginizr allows you to enhance your application in three main ways:
+
+1. **Component Enhancement**:
+    - Wrap React components with additional functionality
+    - Add UI elements without modifying original components
+    - Modify component behavior consistently across your application
+
+2. **Function Modification**:
+    - Intercept and modify function calls
+    - Add pre- and post-processing logic
+    - Transform input and output data
+
+3. **Value Transformation**:
+    - Transform static values and configuration
+    - Modify application constants
+    - Override default settings
+
+### Plugin Types
+
+1. **Component Plugins** (`registerFcPlugin`):
+    - Wrap React components with custom logic
+    - Add UI elements (headers, footers, wrappers)
+    - Modify component props or behavior
+    - Access to the original component through `WrappedComponent`
+
+2. **Function Plugins** (`registerFnPlugin`):
+    - Modify function inputs and outputs
+    - Add logging, analytics, or monitoring
+    - Transform data before or after function execution
+    - Access to original function and all its arguments
+
+3. **Value Plugins** (`registerFnPlugin`):
+    - Transform configuration values
+    - Modify constants and defaults
+    - Chain multiple transformations
+    - Access to original value
+
+### Creating Your First Plugin
+
+1. **Set up the plugin structure:**
+
+```bash
+mkdir -p plugins/my-first-plugin/src/plugins
+cd plugins/my-first-plugin
+```
+
+2. **Create configuration files:**
+
+```json
+// package.json
+{
+  "name": "my-first-plugin",
+  "version": "1.0.0",
+  "dependencies": {
+    "@bigcommerce/catalyst-core": "workspace:*",
+    "@thebigrick/catalyst-pluginizr": "workspace:*"
+  }
+}
+```
+
+```json
+// tsconfig.json
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "Default",
+  "compilerOptions": {
+    "baseUrl": "src",
+    "composite": false,
+    "declaration": true,
+    "declarationMap": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "inlineSources": false,
+    "incremental": true,
+    "isolatedModules": true,
+    "moduleResolution": "node",
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "preserveWatchOutput": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo.json",
+    "resolveJsonModule": true,
+    "jsx": "react"
+  },
+  "exclude": [
+    "node_modules"
+  ]
+}
+```
+
+3. **Implement your first plugin:**
+
+```typescript jsx
+// src/plugins/header-wrapper.tsx
+import { PluginFC } from "@thebigrick/catalyst-pluginizr";
+import { Header } from "@bigcommerce/catalyst-core/components/header";
+
+export const headerWrapper: PluginFC<typeof Header> = {
+    name: "header-wrapper",
+    component: "@bigcommerce/catalyst-core/components/header:Header",
+    wrap: ({ WrappedComponent, ...props }) => (
+      <div className="my-wrapper">
+        <div className="announcement"> Special Offer Today!</div>
+        <WrappedComponent {...props} />
+      </div>
+    ),
+  }
+;
+```
+
+4. **Register your plugin:**
+
+```typescript
+// src/register-plugins.ts
+import { registerFcPlugin } from "@thebigrick/catalyst-pluginizr";
+import { headerWrapper } from "./plugins/header-wrapper";
+
+registerFcPlugin(headerWrapper);
+```
 
 ### Plugin Execution Order
 
-Plugins are executed based on their `sortOrder` parameter (default: 0). Plugins with lower `sortOrder` values are
-executed first. For example:
+Plugins execute based on their `sortOrder` value:
 
-- A plugin with `sortOrder: -10` runs before a plugin with `sortOrder: 0`
-- A plugin with `sortOrder: 5` runs after a plugin with `sortOrder: 0`
-- Plugins with the same `sortOrder` have no guaranteed execution order
+- Lower values run first (e.g., -10 before 0)
+- Default value is 0
+- Same values have no guaranteed order
 
-### Example: Function Plugin
+Example of multiple plugins with order:
 
-Below is an example of how to wrap a server function. The wrap method receives the original function `fn` and its
-arguments, allowing you to modify them before calling `fn`.
+```typescript
+// First plugin (runs first)
+registerFcPlugin({
+  name: "header-promo",
+  sortOrder: -10,
+  // ...
+});
 
-```ts
+// Second plugin
+registerFcPlugin({
+  name: "header-analytics",
+  sortOrder: 0,
+  // ...
+});
+
+// Third plugin (runs last)
+registerFcPlugin({
+  name: "header-customization",
+  sortOrder: 10,
+  // ...
+});
+```
+
+### Naming Conventions
+
+Follow these conventions for plugin identification:
+
+1. **Plugin Names:**
+    - Use descriptive, kebab-case names
+    - Include purpose in name (e.g., "header-promo-banner")
+    - Keep names unique within your plugin
+
+2. **Component/Function IDs:**
+    - Format: `@packageName/path:item`
+    - Example: `@bigcommerce/catalyst-core/components/header:Header`
+    - Include export name for named exports
+    - Omit export name for default exports
+
+3. **File Structure:**
+    - Keep related plugins in dedicated files
+    - Use consistent naming for plugin files
+    - Group plugins logically in directories
+
+## Examples
+
+### Function Plugin
+
+```typescript
 import { registerFnPlugin } from "@thebigrick/catalyst-pluginizr/src/registry";
 import { getSearchResults } from "@bigcommerce/catalyst-core/components/header/_actions/get-search-results";
 
-// First plugin - runs first due to lower sortOrder
+// Logging plugin
 registerFnPlugin<typeof getSearchResults>({
-  name: "convert-search-term",
+  name: "search-term-logger",
   functionId: "@bigcommerce/catalyst-core/components/header/_actions/get-search-results:getSearchResults",
   sortOrder: -10,
+  wrap: (fn, searchTerm) => {
+    console.log(`Search term: ${searchTerm}`);
+    return fn(searchTerm);
+  },
+});
+
+// Search term modifier
+registerFnPlugin<typeof getSearchResults>({
+  name: "search-term-modifier",
+  functionId: "@bigcommerce/catalyst-core/components/header/_actions/get-search-results:getSearchResults",
+  sortOrder: 0,
   wrap: (fn, searchTerm) => {
     if (searchTerm === "test") {
       return fn("Product Test");
@@ -166,25 +304,11 @@ registerFnPlugin<typeof getSearchResults>({
     return fn(searchTerm);
   },
 });
-
-// Second plugin - runs after the first one
-registerFnPlugin<typeof getSearchResults>({
-  name: "log-search-term",
-  functionId: "@bigcommerce/catalyst-core/components/header/_actions/get-search-results:getSearchResults",
-  sortOrder: 0,
-  wrap: (fn, searchTerm) => {
-    console.log(`Searching for: ${searchTerm}`);
-    return fn(searchTerm);
-  },
-});
 ```
 
-### Example: Component Plugin
+### Component Plugin
 
-For component plugins, it is recommended to separate the plugin component definition from the `register-plugins.ts`.
-Here's an example showing multiple plugins on the same component:
-
-```tsx
+```typescript jsx
 // plugins/header-wrapper.tsx
 import { PluginFC } from "@thebigrick/catalyst-pluginizr";
 import React from "react";
@@ -193,11 +317,11 @@ import { Header } from "@bigcommerce/catalyst-core/components/header";
 const headerWrapperPlugin: PluginFC<typeof Header> = {
   name: "header-wrapper",
   component: "@bigcommerce/catalyst-core/components/header:Header",
-  sortOrder: -10, // Runs first
+  sortOrder: -10,
   wrap: ({ WrappedComponent, ...props }) => {
     return (
-      <div className={"my-wrapper"}>
-        <div className={"offer"}>Get 50% off on your next buy</div>
+      <div className="enhanced-header">
+        <div className="promo-banner">Special Offer!</div>
         <WrappedComponent {...props} />
       </div>
     );
@@ -208,7 +332,7 @@ const headerWrapperPlugin: PluginFC<typeof Header> = {
 const headerAnalyticsPlugin: PluginFC<typeof Header> = {
   name: "header-analytics",
   component: "@bigcommerce/catalyst-core/components/header:Header",
-  sortOrder: 0, // Runs after header-wrapper
+  sortOrder: 0,
   wrap: ({ WrappedComponent, ...props }) => {
     return (
       <TrackedComponent>
@@ -227,58 +351,132 @@ registerFcPlugin(headerWrapperPlugin);
 registerFcPlugin(headerAnalyticsPlugin);
 ```
 
-### Example: Non-Function Values Plugin
+### Non-Function Values Plugin
 
-For static values, you can also apply multiple transformations in a specific order:
-
-```ts
+```typescript
 import { registerFnPlugin } from "@thebigrick/catalyst-pluginizr/src/registry";
 import { defaultCurrency } from "@bigcommerce/catalyst-core/config";
 
-// First transformation
+// Currency modifier
 registerFnPlugin<typeof defaultCurrency>({
-  name: "modify-default-currency",
+  name: "currency-modifier",
   functionId: "@bigcommerce/catalyst-core/config:defaultCurrency",
-  sortOrder: -10, // Runs first
+  sortOrder: -10,
   wrap: (value) => {
     return "EUR";
   },
 });
 
-// Second transformation
+// Currency formatter
 registerFnPlugin<typeof defaultCurrency>({
-  name: "apply-currency-suffix",
+  name: "currency-formatter",
   functionId: "@bigcommerce/catalyst-core/config:defaultCurrency",
-  sortOrder: 0, // Runs after modify-default-currency
+  sortOrder: 0,
   wrap: (value) => {
     return `${value}-001`;
   },
 });
 ```
 
-### Naming Conventions
+## Technical Details
 
-- `name`: Provide a descriptive name for each plugin.
-- `functionId` or `component`: Must match the original function or component you want to wrap.
-  Use the `packageName/path/to/item:itemName` format (e.g., `@bigcommerce/catalyst-core/components/header:Header`)
-    - `itemName`: is the export name (omit if default export).
-    - `sortOrder`: is the order in which the plugin should run (lower values run first).
-    - `packageName`: is the Package name from `package.json` (e.g., `@bigcommerce/catalyst-core`).
-    - `path/to/item`: is the path to the item from the package source code root (e.g., `components/header`).
+### Architecture Overview
+
+Catalyst Pluginizr implements a sophisticated architecture that operates in multiple phases:
+
+1. **Build Time Phase:**
+    - Plugin discovery and registration
+    - Code transformation
+    - Optimization and caching
+
+2. **Runtime Phase:**
+    - Plugin execution
+    - Component and function wrapping
+    - Cache management
+
+### Build Time Optimization
+
+The system performs several crucial optimizations during the build phase:
+
+1. **Plugin Discovery**
+    - Scans `/plugins` directory for component imports
+    - Analyzes files with extensions `.js`, `.jsx`, `.ts`, `.tsx`
+    - Creates a cache of components with plugins
+
+2. **Webpack Integration**
+    - Injects custom webpack loader
+    - Wraps exports with plugin handlers
+    - Supports `'use no-plugins'` directive
+    - Excludes `node_modules` and pluginizr package
+
+3. **Plugin Registration File**
+    - Generates automatic `plugins.ts`
+    - Requires `register-plugins.ts` in each plugin
+    - Prevents recursive processing
+
+### Plugin Registration
+
+The registration system uses a two-phase process:
+
+1. **Static Registration**
+    - Handles component and function plugins separately
+    - Stores plugin metadata in memory
+    - Maintains separate registries
+
+2. **Cache Management**
+    - Caches plugin lists by identifier
+    - Pre-sorts plugins by `sortOrder`
+    - Optimizes lookup performance
+
+### Runtime Architecture
+
+At runtime, the system employs several optimizations:
+
+1. **Component Wrapping**
+    - Applies plugins in `sortOrder`
+    - Chains plugin enhancements
+    - Preserves component names
+
+2. **Function Enhancement**
+    - Handles both functions and static values
+    - Provides access to wrapped functions and arguments
+    - Applies plugins sequentially
+
+3. **Performance Considerations**
+    - Caches sorted plugins
+    - Only wraps components with plugins
+    - Bypasses empty plugin lists
 
 ## Additional Notes
 
-- Multiple plugins can be registered for the same component, function, or value
-- Plugin execution order is determined by the `sortOrder` parameter (lower values execute first)
-- Changes made by plugins are automatically applied to your Catalyst project
-- Input values for wrapped functions and components remain strictly typed, ensuring type safety throughout the plugin
-  chain
+- Multiple plugins can target the same component/function
+- Plugin execution follows strict `sortOrder`
+- Changes apply automatically at runtime
+- TypeScript ensures type safety throughout
+- Build-time optimizations improve performance
+- Caching reduces runtime overhead
+- Plugin discovery is automatic
+- Support for hot module replacement
+- Debug mode available for development
 
 ## Contributing
 
-Contributions are welcome! If you find a bug or have a feature request, please open an issue or submit a pull request on
-GitHub.
+We welcome contributions! Please follow these steps:
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+For bugs or feature requests:
+
+- Open an issue on GitHub
+- Provide detailed reproduction steps
+- Include relevant code examples
 
 ## License
 
 This project is licensed under the MIT License. See the `LICENSE.md` file for details.
+
+Copyright (c) 2024 The BigRick

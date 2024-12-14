@@ -28,5 +28,6 @@ export const getFcPlugins = <TSourceComponent extends AnyWrappedFC>(
 export const getFnPlugins = <TSourceFn extends AnyValue>(
   functionId: string,
 ): Array<PluginFn<TSourceFn>> => {
-  return fnPlugins[functionId] ?? [];
+  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+  return (fnPlugins[functionId] ?? []) as Array<PluginFn<TSourceFn>>;
 };

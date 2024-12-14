@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call */
-/* eslint-disable no-console,no-param-reassign */
+/* eslint-disable no-param-reassign */
 
 import { NextConfig } from 'next';
 import { WebpackConfigContext } from 'next/dist/server/config-shared';
@@ -42,10 +42,10 @@ const withCatalystPluginizr = (nextConfig: NextConfig): NextConfig => {
           rules: {
             ...nextConfig.experimental.turbo.rules,
             './**/*.tsx': {
-              loaders: [path.resolve(getSelfRoot(), 'plugin-loader.js')],
+              loaders: [path.resolve(getSelfRoot(), 'pluginizr/loader.js')],
             },
             './**/*.ts': {
-              loaders: [path.resolve(getSelfRoot(), 'plugin-loader.js')],
+              loaders: [path.resolve(getSelfRoot(), 'pluginizr/loader.js')],
             },
           },
         },
@@ -70,11 +70,11 @@ const withCatalystPluginizr = (nextConfig: NextConfig): NextConfig => {
 
       config.module.rules.unshift({
         test: /\.tsx?$/,
-        include: [path.resolve(getCoreBasePath())],
+        include: [getCoreBasePath()],
         exclude: [/node_modules/],
         use: [
           {
-            loader: path.resolve(getSelfRoot(), 'plugin-loader.js'),
+            loader: path.resolve(getSelfRoot(), 'pluginizr/loader.js'),
           },
         ],
         enforce: 'pre',

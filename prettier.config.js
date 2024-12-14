@@ -4,7 +4,7 @@
 const config = {
   printWidth: 100,
   singleQuote: true,
-  trailingComma: "all",
+  trailingComma: 'all',
 };
 
 module.exports = config;

@@ -5,7 +5,7 @@ import path from 'node:path';
  * @returns {string}
  */
 const getSelfRoot = (): string => {
-  return path.join(__dirname, '../..').replace(/\\/g, '/');
+  return path.resolve(path.join(__dirname, '../..').replace(/\\/g, '/'));
 };
 
 export default getSelfRoot;

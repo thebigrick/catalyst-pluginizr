@@ -7,7 +7,7 @@ const pluginizr = require('./pluginizr');
  * @param {string} inputCode - The source code to transform.
  * @returns {string} The transformed code.
  */
-function pluginizerModifier(inputCode) {
+function loader(inputCode) {
   if (
     inputCode.search(/^['"]use\s*no-plugins['"]\s*;?\s*$/) !== -1 ||
     this.resourcePath.includes('/node_modules/') ||
@@ -19,4 +19,4 @@ function pluginizerModifier(inputCode) {
   return pluginizr(inputCode, this.resourcePath);
 }
 
-module.exports = pluginizerModifier;
+module.exports = loader;

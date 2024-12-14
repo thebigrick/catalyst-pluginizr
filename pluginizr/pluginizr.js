@@ -11,12 +11,11 @@ const t = require('@babel/types');
 const fs = require('node:fs');
 const path = require('node:path');
 
+const getPluginizedComponents = require('./get-pluginized-components');
+const isBuild = require('./is-build');
+
 const packagesNameCache = {};
 const tsConfigBaseUrlCache = {};
-
-const isBuild = process.env.NODE_ENV === 'production';
-
-let pluginizedComponents = undefined;
 
 /**
  * Determines if a function node represents a React component by checking for JSX elements.
@@ -194,60 +193,6 @@ const normalizeFunctionBody = (funcNode) => {
 };
 
 /**
- * Extracts module paths from files in the given directory and its subdirectories
- * Used only for build time to reduce the HOC fingerprinting overhead
- * @returns {string[]} Array of found module paths
- */
-const getPluginizedComponents = () => {
-  if (!pluginizedComponents) {
-    const searchFileExtensions = ['.js', '.jsx', '.ts', '.tsx'];
-    const searchPackageRegex =
-      /(?<!import[^\n]*)['"](?<package>@bigcommerce\/catalyst-core\/.+?)['"]/g;
-
-    const startPath = path.resolve(__dirname, '../../plugins');
-    const modulePaths = new Set();
-
-    const scanDirectory = (dirPath) => {
-      try {
-        const entries = fs.readdirSync(dirPath, { withFileTypes: true });
-
-        // eslint-disable-next-line no-restricted-syntax
-        for (const entry of entries) {
-          const fullPath = path.join(dirPath, entry.name);
-
-          if (entry.name === 'node_modules') {
-            // eslint-disable-next-line no-continue
-            continue;
-          }
-
-          if (entry.isDirectory()) {
-            scanDirectory(fullPath);
-          } else if (entry.isFile() && searchFileExtensions.includes(path.extname(entry.name))) {
-            const content = fs.readFileSync(fullPath, 'utf-8');
-
-            // Search for module paths using regular expressions
-            const match = content.matchAll(searchPackageRegex);
-            if (match) {
-              for (const m of match) {
-                modulePaths.add(m.groups.package);
-              }
-            }
-          }
-        }
-      } catch (error) {
-        console.error(`Error scanning directory ${dirPath}:`, error);
-      }
-    };
-
-    scanDirectory(startPath);
-
-    pluginizedComponents = Array.from(modulePaths);
-  }
-
-  return pluginizedComponents;
-};
-
-/**
  * Wraps an exported value (function or otherwise) with the appropriate plugin wrapper.
  * Functions are wrapped as before:
  * - If it's a React component, use withPluginsFC.
@@ -262,11 +207,11 @@ const getPluginizedComponents = () => {
 const wrapExportedValue = (node, identifierName, filename, isDefaultExport = false) => {
   const componentCode = getComponentCode(filename, identifierName, isDefaultExport);
 
-  if (isBuild) {
+  if (isBuild()) {
     const pluginizedComponents = getPluginizedComponents();
 
     if (pluginizedComponents.includes(componentCode)) {
-      console.log(`   Applying plugins to ${componentCode}`);
+      console.log('   Applying plugins to:', componentCode);
     } else {
       return null;
     }
@@ -304,6 +249,7 @@ const wrapExportedValue = (node, identifierName, filename, isDefaultExport = fal
  * @param {boolean} isDefaultExport
  * @returns {void}
  */
+// eslint-disable-next-line complexity
 const handleExport = (decl, filename, isDefaultExport) => {
   const nodeDecl = decl.node.declaration;
 
@@ -323,7 +269,9 @@ const handleExport = (decl, filename, isDefaultExport) => {
 
       if (t.isIdentifier(id) && init) {
         const wrapped = wrapExportedValue(init, id.name, filename);
+
         if (!wrapped) {
+          // eslint-disable-next-line no-continue
           continue;
         }
 
@@ -355,6 +303,7 @@ const handleExport = (decl, filename, isDefaultExport) => {
           filename,
           isDefaultExport,
         );
+
         if (!wrapped) {
           return;
         }
@@ -362,6 +311,7 @@ const handleExport = (decl, filename, isDefaultExport) => {
         binding.path.get('init').replaceWith(wrapped);
       } else if (binding && binding.path.isFunctionDeclaration()) {
         const wrapped = wrapExportedValue(binding.path.node, funcName, filename, isDefaultExport);
+
         if (!wrapped) {
           return;
         }
@@ -374,6 +324,7 @@ const handleExport = (decl, filename, isDefaultExport) => {
       }
     } else {
       const wrapped = wrapExportedValue(nodeDecl, funcName, filename, isDefaultExport);
+
       if (!wrapped) {
         return;
       }

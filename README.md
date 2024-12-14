@@ -47,10 +47,23 @@ the final and some features may not be fully implemented.
    Install the `@thebigrick/catalyst-pluginizr` package inside your `packages` directory:
 
    ```bash
-   cd path-to-catalyst/packages
+   cd /path-to-catalyst/packages
    git clone https://github.com/thebigrick/catalyst-pluginizr.git
    ```
-2. **Enable `plugins/*` in the pnpm workspace**:  
+2. **Add Catalyst Pluginizr as rependency to `core/package.json`**:
+
+   ```json
+   {
+     "...":  "...",
+     "dependencies": {
+       "...":  "...",
+       "@thebigrick/catalyst-pluginizr": "workspace:^",
+       "...":  "..."
+     },
+     "...":  "..."
+   }
+   ```
+3. **Enable `plugins/*` in the pnpm workspace**:  
    In your `pnpm-workspace.yaml`, add the `plugins/*` pattern so that it recognizes your plugin workspace:
 
    ```yaml
@@ -59,12 +72,24 @@ the final and some features may not be fully implemented.
      - packages/*
      - plugins/*
    ```
-3. Configure Next.js with Catalyst Pluginizr:
+
+4. **Install deps**:
+   Run package install from the root of the project:
+
+   ```bash
+   cd /path-to-catalyst/
+   pnpm install
+   ```
+
+5. **Configure Next.js with Catalyst Pluginizr**:
    In your `core/next.config.ts`, import and apply `withCatalystPluginizr` to your Next.js configuration just after the
    `withNextIntl` call:
+
    ```ts
    ...
+
    import { withCatalystPluginizr } from '@thebigrick/catalyst-pluginizr';
+    
    ...
    nextConfig = withNextIntl(nextConfig); // Search for this line
    nextConfig = withCatalystPluginizr(nextConfig); // Add this line
@@ -77,14 +102,16 @@ Once the configuration is in place, you can develop your plugins by placing them
 example:
 
 ```
+
 plugins/
-  my-plugin/
-    src/
-      register-plugins.ts
-      plugins/
-        test.tsx
-    tsconfig.json
-    package.json
+my-plugin/
+src/
+register-plugins.ts
+plugins/
+test.tsx
+tsconfig.json
+package.json
+
 ```
 
 ### Requirements for a Plugin

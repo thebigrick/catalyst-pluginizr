@@ -141,10 +141,6 @@ const getSortedValPlugins = (valueId: string): Array<ValuePlugin<any>> => {
   return plugins;
 };
 
-// Existing withPluginsFC implementation...
-
-// Existing withPluginsFn implementation...
-
 /**
  * Higher-order function that wraps a value with plugins, sorted by sortOrder.
  * @param {string} valueId - Unique identifier for the value.

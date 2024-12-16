@@ -84,17 +84,16 @@ Just a Catalyst-based project (see [Catalyst on Github](https://github.com/bigco
    //...
    ```
 
-5. Add the plugins folder to tailwind config in `core/tailwind.config.js`:
+5. Configure tailwind to use pluginizr in `core/tailwind.config.js`:
 
    ```javascript
-   // ...
-   const config = {
-     content: [
-       // ...
-       '../plugins/**/*.{ts,tsx}', // <-- Add this line inside "content" array
-       // ...
-     ],
-     // ...
+   // Add the following line at the beginning of the file
+   const withPluginizrTailwind = require('@thebigrick/catalyst-pluginizr/pluginizr/with-pluginizr-tailwind');
+   
+   // ... (leave the main content as is)
+   
+   // Replace the default module.exports line at the end with the following:
+   module.exports = withPluginizrTailwind(config);
    ```
 
 6. Install dependencies:
@@ -396,13 +395,13 @@ Here's an example of a currency plugin that adds the SKU to the product card fra
 
 ```typescript
 import { registerValuePlugin } from "@thebigrick/catalyst-pluginizr";
-import { defaultCurrency } from "@bigcommerce/catalyst-core/config";
 import { PricingFragment } from '@bigcommerce/catalyst-core/client/fragments/pricing';
+import { ProductCardFragment } from "@bigcommerce/catalyst-core/components/product-card/fragment";
 import { graphql } from '@bigcommerce/catalyst-core/client/graphql';
-import { AddToCartFragment } from '.@bigcommerce/catalyst-core/components/product-card/add-to-cart/fragment';
+import { AddToCartFragment } from '@bigcommerce/catalyst-core/components/product-card/add-to-cart/fragment';
 
 // Query modifier with SKU
-registerValuePlugin<typeof defaultCurrency>({
+registerValuePlugin<typeof ProductCardFragment>({
   name: "add-product-sku",
   resourceId: "@bigcommerce/catalyst-core/components/product-card/fragment:ProductCardFragment",
   sortOrder: 0,

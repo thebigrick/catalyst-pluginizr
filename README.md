@@ -59,13 +59,9 @@ Just a Catalyst-based project (see [Catalyst on Github](https://github.com/bigco
 
    ```json
    {
-     //... 
      "dependencies": {
-       //...
        "@thebigrick/catalyst-pluginizr": "workspace:*"
-       //... 
      }
-     //...
    }
    ```
 
@@ -88,7 +84,20 @@ Just a Catalyst-based project (see [Catalyst on Github](https://github.com/bigco
    //...
    ```
 
-5. Install dependencies:
+5. Add the plugins folder to tailwind config in `core/tailwind.config.js`:
+
+   ```javascript
+   // ...
+   const config = {
+     content: [
+       // ...
+       '../plugins/**/*.{ts,tsx}', // <-- Add this line inside "content" array
+       // ...
+     ],
+     // ...
+   ```
+
+6. Install dependencies:
 
    ```bash
    cd /path-to-catalyst

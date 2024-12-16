@@ -40,7 +40,7 @@ describe('pluginizr', () => {
       export default myFunction;
     `;
 
-      const expectedCode = `import { withPluginsFC, withPluginsFn } from "@thebigrick/catalyst-pluginizr";
+      const expectedCode = `import { withPluginsFC, withPluginsFn, withPluginsVal } from "@thebigrick/catalyst-pluginizr";
 const myFunction = withPluginsFn("test-package/file", () => {
   console.log('Hello World');
 });
@@ -60,7 +60,7 @@ export default myFunction;`;
       export default myFunction;
     `;
 
-      const expectedCode = `import { withPluginsFC, withPluginsFn } from "@thebigrick/catalyst-pluginizr";
+      const expectedCode = `import { withPluginsFC, withPluginsFn, withPluginsVal } from "@thebigrick/catalyst-pluginizr";
 const myFunction = withPluginsFn("test-package/file", function () {
   console.log('Hello World');
 });
@@ -80,7 +80,7 @@ export default myFunction;`;
       export default myFunction;
     `;
 
-      const expectedCode = `import { withPluginsFC, withPluginsFn } from "@thebigrick/catalyst-pluginizr";
+      const expectedCode = `import { withPluginsFC, withPluginsFn, withPluginsVal } from "@thebigrick/catalyst-pluginizr";
 const myFunction = withPluginsFn("test-package/file", function () {
   console.log('Hello World');
 });
@@ -98,7 +98,7 @@ export default myFunction;`;
       }
     `;
 
-      const expectedCode = `import { withPluginsFC, withPluginsFn } from "@thebigrick/catalyst-pluginizr";
+      const expectedCode = `import { withPluginsFC, withPluginsFn, withPluginsVal } from "@thebigrick/catalyst-pluginizr";
 export default withPluginsFn("test-package/file", () => {
   console.log('Hello World');
 });`;
@@ -114,36 +114,10 @@ export default withPluginsFn("test-package/file", () => {
         console.log('Hello World');
       }`;
 
-      const expectedCode = `import { withPluginsFC, withPluginsFn } from "@thebigrick/catalyst-pluginizr";
+      const expectedCode = `import { withPluginsFC, withPluginsFn, withPluginsVal } from "@thebigrick/catalyst-pluginizr";
 export default withPluginsFn("test-package/file", function () {
   console.log('Hello World');
 });`;
-
-      const res = pluginizr(sampleCode, '/some/file.ts');
-
-      expect(res).toEqual(expectedCode);
-    });
-
-    test('should pluginize non-function-value', () => {
-      const sampleCode = `     
-      const a = 5;
-      export default a;`;
-
-      const expectedCode = `import { withPluginsFC, withPluginsFn } from "@thebigrick/catalyst-pluginizr";
-const a = withPluginsFn("test-package/file", 5);
-export default a;`;
-
-      const res = pluginizr(sampleCode, '/some/file.ts');
-
-      expect(res).toEqual(expectedCode);
-    });
-
-    test('should pluginize anonymous non-function-value', () => {
-      const sampleCode = `     
-      export default 5;`;
-
-      const expectedCode = `import { withPluginsFC, withPluginsFn } from "@thebigrick/catalyst-pluginizr";
-export default withPluginsFn("test-package/file", 5);`;
 
       const res = pluginizr(sampleCode, '/some/file.ts');
 
@@ -159,7 +133,7 @@ export default withPluginsFn("test-package/file", 5);`;
       export default myFunction;
     `;
 
-      const expectedCode = `import { withPluginsFC, withPluginsFn } from "@thebigrick/catalyst-pluginizr";
+      const expectedCode = `import { withPluginsFC, withPluginsFn, withPluginsVal } from "@thebigrick/catalyst-pluginizr";
 const myFunction = withPluginsFn("test-package/file", function (param1: string, param2: number) {
   console.log('Hello World');
 });
@@ -179,7 +153,7 @@ export default myFunction;`;
       export default myFunction;
     `;
 
-      const expectedCode = `import { withPluginsFC, withPluginsFn } from "@thebigrick/catalyst-pluginizr";
+      const expectedCode = `import { withPluginsFC, withPluginsFn, withPluginsVal } from "@thebigrick/catalyst-pluginizr";
 const myFunction = withPluginsFn("test-package/file", (param1: string, param2: number) => {
   console.log('Hello World');
 });
@@ -197,7 +171,7 @@ export default myFunction;`;
       }
     `;
 
-      const expectedCode = `import { withPluginsFC, withPluginsFn } from "@thebigrick/catalyst-pluginizr";
+      const expectedCode = `import { withPluginsFC, withPluginsFn, withPluginsVal } from "@thebigrick/catalyst-pluginizr";
 export const myFunction = withPluginsFn("test-package/file:myFunction", () => {
   console.log('Hello World');
 });`;
@@ -214,23 +188,10 @@ export const myFunction = withPluginsFn("test-package/file:myFunction", () => {
       }
     `;
 
-      const expectedCode = `import { withPluginsFC, withPluginsFn } from "@thebigrick/catalyst-pluginizr";
+      const expectedCode = `import { withPluginsFC, withPluginsFn, withPluginsVal } from "@thebigrick/catalyst-pluginizr";
 export const myFunction = withPluginsFn("test-package/file:myFunction", function () {
   console.log('Hello World');
 });`;
-
-      const res = pluginizr(sampleCode, '/some/file.ts');
-
-      expect(res).toEqual(expectedCode);
-    });
-
-    test('should pluginize default export on anonymous value', () => {
-      const sampleCode = `
-        export default 5;
-      `;
-
-      const expectedCode = `import { withPluginsFC, withPluginsFn } from "@thebigrick/catalyst-pluginizr";
-export default withPluginsFn("test-package/file", 5);`;
 
       const res = pluginizr(sampleCode, '/some/file.ts');
 
@@ -248,7 +209,7 @@ export default withPluginsFn("test-package/file", 5);`;
       export default myComponent;
     `;
 
-      const expectedCode = `import { withPluginsFC, withPluginsFn } from "@thebigrick/catalyst-pluginizr";
+      const expectedCode = `import { withPluginsFC, withPluginsFn, withPluginsVal } from "@thebigrick/catalyst-pluginizr";
 const myComponent = withPluginsFC("test-package/file", () => {
   return <div>Hello World</div>;
 });
@@ -268,7 +229,7 @@ export default myComponent;`;
       export default myComponent;
     `;
 
-      const expectedCode = `import { withPluginsFC, withPluginsFn } from "@thebigrick/catalyst-pluginizr";
+      const expectedCode = `import { withPluginsFC, withPluginsFn, withPluginsVal } from "@thebigrick/catalyst-pluginizr";
 const myComponent = withPluginsFC("test-package/file", function () {
   return <div>Hello World</div>;
 });
@@ -280,27 +241,44 @@ export default myComponent;`;
     });
   });
 
-  describe('should not pluginize', () => {
-    test('interfaces', () => {
-      const sampleCode = `import { withPluginsFC, withPluginsFn } from "@thebigrick/catalyst-pluginizr";
-export interface MyInterface {
-  name: string;
-}`;
+  describe('withPluginsVal', () => {
+    test('should pluginize non-function-value', () => {
+      const sampleCode = `     
+      const a = 5;
+      export default a;`;
+
+      const expectedCode = `import { withPluginsFC, withPluginsFn, withPluginsVal } from "@thebigrick/catalyst-pluginizr";
+const a = withPluginsVal("test-package/file", 5);
+export default a;`;
 
       const res = pluginizr(sampleCode, '/some/file.ts');
 
-      expect(res).toEqual(sampleCode);
+      expect(res).toEqual(expectedCode);
     });
 
-    test('type aliases', () => {
-      const sampleCode = `import { withPluginsFC, withPluginsFn } from "@thebigrick/catalyst-pluginizr";
-export type MyType = {
-  name: string;
-};`;
+    test('should pluginize anonymous non-function-value', () => {
+      const sampleCode = `     
+      export default 5;`;
+
+      const expectedCode = `import { withPluginsFC, withPluginsFn, withPluginsVal } from "@thebigrick/catalyst-pluginizr";
+export default withPluginsVal("test-package/file", 5);`;
 
       const res = pluginizr(sampleCode, '/some/file.ts');
 
-      expect(res).toEqual(sampleCode);
+      expect(res).toEqual(expectedCode);
+    });
+
+    test('should pluginize default export on anonymous value', () => {
+      const sampleCode = `
+        export default 5;
+      `;
+
+      const expectedCode = `import { withPluginsFC, withPluginsFn, withPluginsVal } from "@thebigrick/catalyst-pluginizr";
+export default withPluginsVal("test-package/file", 5);`;
+
+      const res = pluginizr(sampleCode, '/some/file.ts');
+
+      expect(res).toEqual(expectedCode);
     });
   });
 
@@ -327,7 +305,7 @@ export type MyType = {
       process.env.NODE_ENV = prevNodeEnv;
 
       expect(res)
-        .toEqual(`import { withPluginsFC, withPluginsFn } from "@thebigrick/catalyst-pluginizr";
+        .toEqual(`import { withPluginsFC, withPluginsFn, withPluginsVal } from "@thebigrick/catalyst-pluginizr";
 const myNonPluginizedFunction = () => {
   console.log('Hello World');
 };
@@ -335,6 +313,30 @@ export const myPluginizedFunction = withPluginsFn("test-package/file:myPluginize
   console.log('Hello World');
 });
 export default myNonPluginizedFunction;`);
+    });
+  });
+
+  describe('should not pluginize', () => {
+    test('interfaces', () => {
+      const sampleCode = `import { withPluginsFC, withPluginsFn, withPluginsVal } from "@thebigrick/catalyst-pluginizr";
+export interface MyInterface {
+  name: string;
+}`;
+
+      const res = pluginizr(sampleCode, '/some/file.ts');
+
+      expect(res).toEqual(sampleCode);
+    });
+
+    test('type aliases', () => {
+      const sampleCode = `import { withPluginsFC, withPluginsFn, withPluginsVal } from "@thebigrick/catalyst-pluginizr";
+export type MyType = {
+  name: string;
+};`;
+
+      const res = pluginizr(sampleCode, '/some/file.ts');
+
+      expect(res).toEqual(sampleCode);
     });
   });
 });

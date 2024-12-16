@@ -1,19 +1,28 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { getFcPlugins, getFnPlugins } from './registry';
-import { AnyValue, AnyWrappedFC, PluginFC, PluginFn, PluginWrapperFC } from './types';
+import { getFcPlugins, getFnPlugins, getValPlugins } from './registry';
+import {
+  AnyValue,
+  AnyWrappedFC,
+  ComponentPlugin,
+  FunctionPlugin,
+  PluginWrapperFC,
+  ValuePlugin,
+} from './types';
 
 /**
- * Caches sorted FC plugins by component name to improve performance.
+ * Caches sorted plugins by resourceId to improve performance at runtime.
  */
-const sortedFcPluginsCache = new Map<string, Array<PluginFC<any>>>();
+const sortedFcPluginsCache = new Map<string, Array<ComponentPlugin<any>>>();
+const sortedFnPluginsCache = new Map<string, Array<FunctionPlugin<any>>>();
+const sortedValPluginsCache = new Map<string, Array<ValuePlugin<any>>>();
 
 /**
  * Retrieves and sorts FC plugins based on sortOrder.
  * @param {string} component - The component name.
- * @returns {Array<PluginFC<any>>} Sorted array of FC plugins.
+ * @returns {Array<ComponentPlugin<any>>} Sorted array of FC plugins.
  */
-const getSortedFcPlugins = (component: string): Array<PluginFC<any>> => {
+const getSortedFcPlugins = (component: string): Array<ComponentPlugin<any>> => {
   if (sortedFcPluginsCache.has(component)) {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     return sortedFcPluginsCache.get(component)!;
@@ -61,16 +70,11 @@ export const withPluginsFC = <P extends AnyWrappedFC = AnyWrappedFC>(
 };
 
 /**
- * Caches sorted Fn plugins by functionId to improve performance.
- */
-const sortedFnPluginsCache = new Map<string, Array<PluginFn<any>>>();
-
-/**
  * Retrieves and sorts Fn plugins based on sortOrder.
  * @param {string} functionId - The function identifier.
- * @returns {Array<PluginFn<any>>} Sorted array of Fn plugins.
+ * @returns {Array<FunctionPlugin<any>>} Sorted array of Fn plugins.
  */
-const getSortedFnPlugins = (functionId: string): Array<PluginFn<any>> => {
+const getSortedFnPlugins = (functionId: string): Array<FunctionPlugin<any>> => {
   if (sortedFnPluginsCache.has(functionId)) {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     return sortedFnPluginsCache.get(functionId)!;
@@ -116,4 +120,46 @@ export const withPluginsFn = <T extends AnyValue = AnyValue>(functionId: string,
     // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
     return plugin.wrap(enhancedValue) as T;
   }, wrapped);
+};
+
+/**
+ * Retrieves and sorts Val plugins based on sortOrder.
+ * @param {string} valueId - The value identifier.
+ * @returns {Array<ValuePlugin<any>>} Sorted array of Val plugins.
+ */
+const getSortedValPlugins = (valueId: string): Array<ValuePlugin<any>> => {
+  if (sortedValPluginsCache.has(valueId)) {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    return sortedValPluginsCache.get(valueId)!;
+  }
+
+  const plugins = getValPlugins(valueId).slice(); // Clone to avoid mutating original
+
+  plugins.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  sortedValPluginsCache.set(valueId, plugins);
+
+  return plugins;
+};
+
+// Existing withPluginsFC implementation...
+
+// Existing withPluginsFn implementation...
+
+/**
+ * Higher-order function that wraps a value with plugins, sorted by sortOrder.
+ * @param {string} valueId - Unique identifier for the value.
+ * @param {any} value - The value to be wrapped.
+ * @returns {any} - The enhanced value wrapped with all applicable plugins.
+ */
+export const withPluginsVal = <T extends AnyValue = AnyValue>(valueId: string, value: T): T => {
+  const plugins = getSortedValPlugins(valueId);
+
+  if (plugins.length === 0) {
+    return value;
+  }
+
+  return plugins.reduce<T>((enhancedValue, plugin) => {
+    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+    return plugin.wrap(enhancedValue) as T;
+  }, value);
 };

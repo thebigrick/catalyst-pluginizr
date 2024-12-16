@@ -44,56 +44,58 @@ With this tool, you can:
 
 ### Prerequisites
 
-- A Catalyst-based project
-- Node.js and pnpm installed
-- Access to your project's `packages` directory
+Just a Catalyst-based project (see [Catalyst on Github](https://github.com/bigcommerce/catalyst/)).
 
 ### Installation Steps
 
-1. **Clone the package:**
+1. Clone the package in your `package` folder:
 
-```bash
-cd /path-to-catalyst/packages
-git clone https://github.com/thebigrick/catalyst-pluginizr.git
-```
+   ```bash
+   cd /path-to-catalyst/packages
+   git clone https://github.com/thebigrick/catalyst-pluginizr.git
+   ```
 
-2. **Update your core dependencies:**
+2. Add the pluginizr dependency in `core/package.json` file:
 
-```json
-{
-  "dependencies": {
-    "@thebigrick/catalyst-pluginizr": "workspace:^"
-  }
-}
-```
+   ```json
+   {
+     //... 
+     "dependencies": {
+       //...
+       "@thebigrick/catalyst-pluginizr": "workspace:*"
+       //... 
+     }
+     //...
+   }
+   ```
 
-3. **Enable plugins in workspace:**
+3. Add a new workspace for plugins in `pnpm-workspace.yaml` file in your root folder:
 
-```yaml
-# pnpm-workspace.yaml
-packages:
-  - core
-  - packages/*
-  - plugins/*
-```
+   ```yaml
+   packages:
+     - core
+     - packages/*
+     - plugins/* # <-- Add this line
+   ```
 
-4. **Configure Next.js:**
+4. Configure Next.js to use the pluginizr in `core/next.config.ts`:
 
-```typescript
-// core/next.config.ts
-import { withCatalystPluginizr } from '@thebigrick/catalyst-pluginizr';
+   ```typescript
+   import { withCatalystPluginizr } from '@thebigrick/catalyst-pluginizr'; // <-- Add this line at beginning
+   //...
+   nextConfig = withNextIntl(nextConfig);
+   nextConfig = withCatalystPluginizr(nextConfig); // <-- Add this line after withNextIntl
+   //...
+   ```
 
-// Add after withNextIntl
-nextConfig = withNextIntl(nextConfig);
-nextConfig = withCatalystPluginizr(nextConfig);
-```
+5. Install dependencies:
 
-5. **Install dependencies:**
+   ```bash
+   cd /path-to-catalyst
+   pnpm install
+   ```
 
-```bash
-cd /path-to-catalyst
-pnpm install
-```
+6. Get fun!
 
 ## Plugin Development Guide
 
@@ -118,19 +120,19 @@ Catalyst Pluginizr allows you to enhance your application in three main ways:
 
 ### Plugin Types
 
-1. **Component Plugins** (`registerFcPlugin`):
+1. **Component Plugins** (will use `registerComponentPlugin`):
     - Wrap React components with custom logic
     - Add UI elements (headers, footers, wrappers)
     - Modify component props or behavior
     - Access to the original component through `WrappedComponent`
 
-2. **Function Plugins** (`registerFnPlugin`):
+2. **Function Plugins** (will use `registerFunctionPlugin`):
     - Modify function inputs and outputs
     - Add logging, analytics, or monitoring
     - Transform data before or after function execution
     - Access to original function and all its arguments
 
-3. **Value Plugins** (`registerFnPlugin`):
+3. **Value Plugins** (will use `registerValuePlugin`):
     - Transform configuration values
     - Modify constants and defaults
     - Chain multiple transformations
@@ -140,85 +142,101 @@ Catalyst Pluginizr allows you to enhance your application in three main ways:
 
 1. **Set up the plugin structure:**
 
-```bash
-mkdir -p plugins/my-first-plugin/src/plugins
-cd plugins/my-first-plugin
-```
+   ```bash
+   cd /path-to-catalyst
+   mkdir -p plugins/my-first-plugin
+   cd plugins/my-first-plugin
+   ```
 
-2. **Create configuration files:**
+2. **Create basic configuration files for a typescript project:**
 
-```json
-// package.json
-{
-  "name": "my-first-plugin",
-  "version": "1.0.0",
-  "dependencies": {
-    "@bigcommerce/catalyst-core": "workspace:*",
-    "@thebigrick/catalyst-pluginizr": "workspace:*"
-  }
-}
-```
+   Sample `package.json` (adapt as needed):
 
-```json
-// tsconfig.json
-{
-  "$schema": "https://json.schemastore.org/tsconfig",
-  "display": "Default",
-  "compilerOptions": {
-    "baseUrl": "src",
-    "composite": false,
-    "declaration": true,
-    "declarationMap": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "inlineSources": false,
-    "incremental": true,
-    "isolatedModules": true,
-    "moduleResolution": "node",
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "preserveWatchOutput": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo.json",
-    "resolveJsonModule": true,
-    "jsx": "react"
-  },
-  "exclude": [
-    "node_modules"
-  ]
-}
-```
+   ```json
+   
+   {
+     "name": "my-first-plugin",
+     "version": "1.0.0",
+     "dependencies": {
+       "@thebigrick/catalyst-pluginizr": "workspace:*",
+       "@bigcommerce/catalyst-core": "workspace:*",
+       "react": "^18.3.1"
+     },
+     "devDependencies": {
+       "@types/node": "^20.17.6",
+       "@types/react": "^18.3.12",
+       "typescript": "^5.6.3"
+     }
+   }
+   ```
+
+   Sample `tsconfig.json` (you will likely need to adjust this):
+
+   ```json
+   {
+     "$schema": "https://json.schemastore.org/tsconfig",
+     "display": "Default",
+     "compilerOptions": {
+       "baseUrl": "src",
+       "composite": false,
+       "declaration": true,
+       "declarationMap": true,
+       "esModuleInterop": true,
+       "forceConsistentCasingInFileNames": true,
+       "inlineSources": false,
+       "incremental": true,
+       "isolatedModules": true,
+       "moduleResolution": "node",
+       "noUnusedLocals": false,
+       "noUnusedParameters": false,
+       "preserveWatchOutput": true,
+       "skipLibCheck": true,
+       "strict": true,
+       "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo.json",
+       "resolveJsonModule": true,
+       "jsx": "react"
+     },
+     "exclude": [
+       "node_modules"
+     ]
+   }
+   ```
 
 3. **Implement your first plugin:**
 
-```typescript jsx
-// src/plugins/header-wrapper.tsx
-import { PluginFC } from "@thebigrick/catalyst-pluginizr";
-import { Header } from "@bigcommerce/catalyst-core/components/header";
+   In this example, we'll create a simple header wrapper plugin that adds a promo banner above the header.
 
-export const headerWrapper: PluginFC<typeof Header> = {
-    name: "header-wrapper",
-    component: "@bigcommerce/catalyst-core/components/header:Header",
-    wrap: ({ WrappedComponent, ...props }) => (
-      <div className="my-wrapper">
-        <div className="announcement"> Special Offer Today!</div>
-        <WrappedComponent {...props} />
-      </div>
-    ),
-  }
-;
-```
+   > While wrapping a component, you can access the original component through the `WrappedComponent` prop.
 
-4. **Register your plugin:**
+   ```typescript jsx
+   // src/plugins/header-wrapper.tsx
+   import { ComponentPlugin } from "@thebigrick/catalyst-pluginizr";
+   import { Header } from "@bigcommerce/catalyst-core/components/header";
+   
+   export const headerWrapper: ComponentPlugin<typeof Header> = {
+       name: "header-wrapper",
+       resourceId: "@bigcommerce/catalyst-core/components/header:Header",
+       wrap: ({ WrappedComponent, ...props }) => (
+         <div className="w-full">
+           <div className="font-bold text-center">Special Offer Today!</div>
+           <WrappedComponent {...props} />
+         </div>
+       ),
+     }
+   ;
+   ```
 
-```typescript
-// src/register-plugins.ts
-import { registerFcPlugin } from "@thebigrick/catalyst-pluginizr";
-import { headerWrapper } from "./plugins/header-wrapper";
+4. **Register your plugin in `src/register-plugins.ts`:**
 
-registerFcPlugin(headerWrapper);
-```
+   > Please note that you need to register your plugin in the `register-plugins.ts` file to make it available at
+   runtime.
+
+   ```typescript
+   import { registerComponentPlugin } from "@thebigrick/catalyst-pluginizr";
+   import { headerWrapper } from "./plugins/header-wrapper";
+   
+   registerComponentPlugin(headerWrapper);
+   ```
 
 ### Plugin Execution Order
 
@@ -226,34 +244,34 @@ Plugins execute based on their `sortOrder` value:
 
 - Lower values run first (e.g., -10 before 0)
 - Default value is 0
-- Same values have no guaranteed order
+- Same values <u>have no guaranteed order</u>
 
 Example of multiple plugins with order:
 
 ```typescript
 // First plugin (runs first)
-registerFcPlugin({
+registerComponentPlugin({
   name: "header-promo",
   sortOrder: -10,
   // ...
 });
 
 // Second plugin
-registerFcPlugin({
+registerComponentPlugin({
   name: "header-analytics",
   sortOrder: 0,
   // ...
 });
 
 // Third plugin (runs last)
-registerFcPlugin({
+registerComponentPlugin({
   name: "header-customization",
   sortOrder: 10,
   // ...
 });
 ```
 
-### Naming Conventions
+### Naming Conventions and best practices
 
 Follow these conventions for plugin identification:
 
@@ -262,11 +280,11 @@ Follow these conventions for plugin identification:
     - Include purpose in name (e.g., "header-promo-banner")
     - Keep names unique within your plugin
 
-2. **Component/Function IDs:**
-    - Format: `@packageName/path:item`
-    - Example: `@bigcommerce/catalyst-core/components/header:Header`
-    - Include export name for named exports
-    - Omit export name for default exports
+2. **Resource IDs:**
+    - Format: `@packageName/path` or `@packageName/path:exportName`
+    - Example:
+        - For named exports `@bigcommerce/catalyst-core/components/header:Header`
+        - For default exports `@bigcommerce/catalyst-core/components/header/cart-icon`
 
 3. **File Structure:**
     - Keep related plugins in dedicated files
@@ -277,14 +295,23 @@ Follow these conventions for plugin identification:
 
 ### Function Plugin
 
+With function plugins, you can intercept and modify function calls.<br />
+
+> While wrapping a function, you can access the original function and its arguments.<br />
+> By not calling the original function, you can prevent its execution.<br />
+>
+> **Please note that function plugin use `registerFunctionPlugin`.**
+
+Here's an example of a search term logger and modifier:
+
 ```typescript
-import { registerFnPlugin } from "@thebigrick/catalyst-pluginizr/src/registry";
+import { registerFunctionPlugin } from "@thebigrick/catalyst-pluginizr";
 import { getSearchResults } from "@bigcommerce/catalyst-core/components/header/_actions/get-search-results";
 
 // Logging plugin
-registerFnPlugin<typeof getSearchResults>({
+registerFunctionPlugin<typeof getSearchResults>({
   name: "search-term-logger",
-  functionId: "@bigcommerce/catalyst-core/components/header/_actions/get-search-results:getSearchResults",
+  resourceId: "@bigcommerce/catalyst-core/components/header/_actions/get-search-results:getSearchResults",
   sortOrder: -10,
   wrap: (fn, searchTerm) => {
     console.log(`Search term: ${searchTerm}`);
@@ -293,9 +320,9 @@ registerFnPlugin<typeof getSearchResults>({
 });
 
 // Search term modifier
-registerFnPlugin<typeof getSearchResults>({
+registerFunctionPlugin<typeof getSearchResults>({
   name: "search-term-modifier",
-  functionId: "@bigcommerce/catalyst-core/components/header/_actions/get-search-results:getSearchResults",
+  resourceId: "@bigcommerce/catalyst-core/components/header/_actions/get-search-results:getSearchResults",
   sortOrder: 0,
   wrap: (fn, searchTerm) => {
     if (searchTerm === "test") {
@@ -308,30 +335,25 @@ registerFnPlugin<typeof getSearchResults>({
 
 ### Component Plugin
 
+With component plugins, you can wrap React components with custom logic.<br />
+
+> While wrapping a component, you can access the original component through the `WrappedComponent` prop.<br />
+> By not calling the original component, you can prevent its rendering.<br />
+>
+> **Please note that function plugin use `registerComponentPlugin`.**
+
+Here's an example of a header wrapper and analytics plugin:
+
 ```typescript jsx
 // plugins/header-wrapper.tsx
-import { PluginFC } from "@thebigrick/catalyst-pluginizr";
+import { ComponentPlugin } from "@thebigrick/catalyst-pluginizr";
 import React from "react";
 import { Header } from "@bigcommerce/catalyst-core/components/header";
 
-const headerWrapperPlugin: PluginFC<typeof Header> = {
-  name: "header-wrapper",
-  component: "@bigcommerce/catalyst-core/components/header:Header",
-  sortOrder: -10,
-  wrap: ({ WrappedComponent, ...props }) => {
-    return (
-      <div className="enhanced-header">
-        <div className="promo-banner">Special Offer!</div>
-        <WrappedComponent {...props} />
-      </div>
-    );
-  },
-};
-
 // plugins/header-analytics.tsx
-const headerAnalyticsPlugin: PluginFC<typeof Header> = {
+const headerAnalyticsPlugin: ComponentPlugin<typeof Header> = {
   name: "header-analytics",
-  component: "@bigcommerce/catalyst-core/components/header:Header",
+  resourceId: "@bigcommerce/catalyst-core/components/header:Header",
   sortOrder: 0,
   wrap: ({ WrappedComponent, ...props }) => {
     return (
@@ -342,122 +364,70 @@ const headerAnalyticsPlugin: PluginFC<typeof Header> = {
   },
 };
 
+export default headerAnalyticsPlugin;
+```
+
+```typescript
 // register-plugins.ts
-import { registerFcPlugin } from "@thebigrick/catalyst-pluginizr";
-import headerWrapperPlugin from "./plugins/header-wrapper";
+import { registerComponentPlugin } from "@thebigrick/catalyst-pluginizr";
 import headerAnalyticsPlugin from "./plugins/header-analytics";
 
-registerFcPlugin(headerWrapperPlugin);
-registerFcPlugin(headerAnalyticsPlugin);
+registerComponentPlugin(headerAnalyticsPlugin);
 ```
 
 ### Non-Function Values Plugin
 
+With value plugins, you can transform static values and configuration.<br />
+
+> While wrapping a value, you can access the original value as parameter of `wrap` function.<br />
+>
+> **Please note that value plugins use `registerValuePlugin`.**
+
+Here's an example of a currency plugin that adds the SKU to the product card fragment:
+
 ```typescript
-import { registerFnPlugin } from "@thebigrick/catalyst-pluginizr/src/registry";
+import { registerValuePlugin } from "@thebigrick/catalyst-pluginizr";
 import { defaultCurrency } from "@bigcommerce/catalyst-core/config";
+import { PricingFragment } from '@bigcommerce/catalyst-core/client/fragments/pricing';
+import { graphql } from '@bigcommerce/catalyst-core/client/graphql';
+import { AddToCartFragment } from '.@bigcommerce/catalyst-core/components/product-card/add-to-cart/fragment';
 
-// Currency modifier
-registerFnPlugin<typeof defaultCurrency>({
-  name: "currency-modifier",
-  functionId: "@bigcommerce/catalyst-core/config:defaultCurrency",
-  sortOrder: -10,
-  wrap: (value) => {
-    return "EUR";
-  },
-});
-
-// Currency formatter
-registerFnPlugin<typeof defaultCurrency>({
-  name: "currency-formatter",
-  functionId: "@bigcommerce/catalyst-core/config:defaultCurrency",
+// Query modifier with SKU
+registerValuePlugin<typeof defaultCurrency>({
+  name: "add-product-sku",
+  resourceId: "@bigcommerce/catalyst-core/components/product-card/fragment:ProductCardFragment",
   sortOrder: 0,
   wrap: (value) => {
-    return `${value}-001`;
+    console.log('My old fragment was:', value);
+
+    return graphql(
+      `
+        fragment ProductCardFragment on Product {
+         entityId
+         sku # <-- This was missing in the original query
+         name
+         defaultImage {
+           altText
+           url: urlTemplate(lossy: true)
+         }
+         path
+         brand {
+           name
+           path
+         }
+         reviewSummary {
+           numberOfReviews
+           averageRating
+         }
+         ...AddToCartFragment
+         ...PricingFragment
+       }
+     `,
+      [AddToCartFragment, PricingFragment],
+    );
   },
 });
 ```
-
-## Technical Details
-
-### Architecture Overview
-
-Catalyst Pluginizr implements a sophisticated architecture that operates in multiple phases:
-
-1. **Build Time Phase:**
-    - Plugin discovery and registration
-    - Code transformation
-    - Optimization and caching
-
-2. **Runtime Phase:**
-    - Plugin execution
-    - Component and function wrapping
-    - Cache management
-
-### Build Time Optimization
-
-The system performs several crucial optimizations during the build phase:
-
-1. **Plugin Discovery**
-    - Scans `/plugins` directory for component imports
-    - Analyzes files with extensions `.js`, `.jsx`, `.ts`, `.tsx`
-    - Creates a cache of components with plugins
-
-2. **Webpack Integration**
-    - Injects custom webpack loader
-    - Wraps exports with plugin handlers
-    - Supports `'use no-plugins'` directive
-    - Excludes `node_modules` and pluginizr package
-
-3. **Plugin Registration File**
-    - Generates automatic `plugins.ts`
-    - Requires `register-plugins.ts` in each plugin
-    - Prevents recursive processing
-
-### Plugin Registration
-
-The registration system uses a two-phase process:
-
-1. **Static Registration**
-    - Handles component and function plugins separately
-    - Stores plugin metadata in memory
-    - Maintains separate registries
-
-2. **Cache Management**
-    - Caches plugin lists by identifier
-    - Pre-sorts plugins by `sortOrder`
-    - Optimizes lookup performance
-
-### Runtime Architecture
-
-At runtime, the system employs several optimizations:
-
-1. **Component Wrapping**
-    - Applies plugins in `sortOrder`
-    - Chains plugin enhancements
-    - Preserves component names
-
-2. **Function Enhancement**
-    - Handles both functions and static values
-    - Provides access to wrapped functions and arguments
-    - Applies plugins sequentially
-
-3. **Performance Considerations**
-    - Caches sorted plugins
-    - Only wraps components with plugins
-    - Bypasses empty plugin lists
-
-## Additional Notes
-
-- Multiple plugins can target the same component/function
-- Plugin execution follows strict `sortOrder`
-- Changes apply automatically at runtime
-- TypeScript ensures type safety throughout
-- Build-time optimizations improve performance
-- Caching reduces runtime overhead
-- Plugin discovery is automatic
-- Support for hot module replacement
-- Debug mode available for development
 
 ## Contributing
 

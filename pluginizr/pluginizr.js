@@ -196,8 +196,8 @@ const normalizeFunctionBody = (funcNode) => {
  * Wraps an exported value (function or otherwise) with the appropriate plugin wrapper.
  * Functions are wrapped as before:
  * - If it's a React component, use withPluginsFC.
- * - Otherwise, use withPluginsFn.
- * Non-function values (classes, arrays, objects, strings, numbers, etc.) are always wrapped with withPluginsFn.
+ * - If it's a function, use withPluginsFn.
+ * - If it's a value, use withPluginsVal.
  * @param {Object} node - The AST node of the exported item.
  * @param {string} identifierName - The identifier name of the variable or function being exported.
  * @param {string} filename - The source file path.
@@ -238,8 +238,8 @@ const wrapExportedValue = (node, identifierName, filename, isDefaultExport = fal
     return t.callExpression(t.identifier(wrapperName), [t.stringLiteral(componentCode), wrappedFn]);
   }
 
-  // Not a function, wrap with withPluginsFn
-  return t.callExpression(t.identifier('withPluginsFn'), [t.stringLiteral(componentCode), node]);
+  // Not a function, wrap with withPluginsVal
+  return t.callExpression(t.identifier('withPluginsVal'), [t.stringLiteral(componentCode), node]);
 };
 
 /**
@@ -358,6 +358,7 @@ const pluginizr = (code, filename) => {
 
   let withPluginsFCImported = false;
   let withPluginsFnImported = false;
+  let withPluginsValImported = false;
 
   traverse(ast, {
     ImportDeclaration: (declPath) => {
@@ -366,6 +367,7 @@ const pluginizr = (code, filename) => {
           if (t.isImportSpecifier(spec)) {
             if (spec.imported.name === 'withPluginsFC') withPluginsFCImported = true;
             if (spec.imported.name === 'withPluginsFn') withPluginsFnImported = true;
+            if (spec.imported.name === 'withPluginsVal') withPluginsValImported = true;
           }
         });
       }
@@ -384,6 +386,12 @@ const pluginizr = (code, filename) => {
   if (!withPluginsFnImported) {
     importSpecifiers.push(
       t.importSpecifier(t.identifier('withPluginsFn'), t.identifier('withPluginsFn')),
+    );
+  }
+
+  if (!withPluginsValImported) {
+    importSpecifiers.push(
+      t.importSpecifier(t.identifier('withPluginsVal'), t.identifier('withPluginsVal')),
     );
   }
 

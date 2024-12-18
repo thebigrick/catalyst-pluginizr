@@ -37,7 +37,7 @@ const installCatalystPluginizr = () => {
     const nextConfigPath = path.join(catalystRoot, 'core', 'next.config.ts');
     let nextConfig = fs.readFileSync(nextConfigPath, 'utf-8');
 
-    if (!nextConfig.includes('withCatalystPluginizr')) {
+    if (!nextConfig.includes('with-catalyst-pluginizr')) {
       nextConfig = `import withCatalystPluginizr from '@thebigrick/catalyst-pluginizr/with-catalyst-pluginizr';\n${nextConfig}`;
 
       nextConfig = nextConfig.replace(
@@ -52,20 +52,20 @@ const installCatalystPluginizr = () => {
     const tailwindConfigPath = path.join(catalystRoot, 'core', 'tailwind.config.js');
     let tailwindConfig = fs.readFileSync(tailwindConfigPath, 'utf-8');
 
-    const tailwindPluginizrImport =
-      "const withPluginizrTailwind = require('@thebigrick/catalyst-pluginizr/pluginizr/with-pluginizr-tailwind');\n";
-
     if (!tailwindConfig.includes('with-pluginizr-tailwind')) {
+      const tailwindPluginizrImport =
+          "const withPluginizrTailwind = require('@thebigrick/catalyst-pluginizr/pluginizr/with-pluginizr-tailwind');\n";
+
       tailwindConfig = tailwindPluginizrImport + tailwindConfig;
+
+      tailwindConfig = tailwindConfig.replace(
+          'module.exports = config;',
+          'module.exports = withPluginizrTailwind(config);',
+      );
+
+      fs.writeFileSync(tailwindConfigPath, tailwindConfig);
+      console.log('✓ Updated tailwind.config.js');
     }
-
-    tailwindConfig = tailwindConfig.replace(
-      /module\.exports\s*=\s*(\{[\s\S]*?\});?/,
-      'const config = $1;\nmodule.exports = withPluginizrTailwind(config);',
-    );
-
-    fs.writeFileSync(tailwindConfigPath, tailwindConfig);
-    console.log('✓ Updated tailwind.config.js');
 
     const tsconfigPath = path.join(catalystRoot, 'core', 'tsconfig.json');
     const tsconfig = JSON.parse(fs.readFileSync(tsconfigPath, 'utf-8'));

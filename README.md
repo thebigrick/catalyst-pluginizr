@@ -5,23 +5,19 @@
 - [Introduction](#introduction)
 - [Quick Start](#quick-start)
     - [Prerequisites](#prerequisites)
-    - [Installation Steps](#installation-steps)
+    - [Installation](#installation)
+        - [Automatic Installation](#automatic-installation)
+        - [Manual Installation](#manual-installation)
 - [Plugin Development Guide](#plugin-development-guide)
     - [Basic Concepts](#basic-concepts)
     - [Plugin Types](#plugin-types)
     - [Creating Your First Plugin](#creating-your-first-plugin)
     - [Plugin Execution Order](#plugin-execution-order)
-    - [Naming Conventions](#naming-conventions)
+    - [Naming Conventions and Best Practices](#naming-conventions-and-best-practices)
 - [Examples](#examples)
     - [Function Plugin](#function-plugin)
     - [Component Plugin](#component-plugin)
     - [Non-Function Values Plugin](#non-function-values-plugin)
-- [Technical Details](#technical-details)
-    - [Architecture Overview](#architecture-overview)
-    - [Build Time Optimization](#build-time-optimization)
-    - [Plugin Registration](#plugin-registration)
-    - [Runtime Architecture](#runtime-architecture)
-- [Additional Notes](#additional-notes)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -46,7 +42,37 @@ With this tool, you can:
 
 Just a Catalyst-based project (see [Catalyst on Github](https://github.com/bigcommerce/catalyst/)).
 
-### Installation Steps
+### Installation
+
+You can install Catalyst Pluginizr either automatically using our installation script or manually following step-by-step
+instructions.
+
+#### Automatic Installation
+
+1. Clone the package in your `packages` folder:
+
+   ```bash
+   cd /path-to-catalyst/packages
+   git clone https://github.com/thebigrick/catalyst-pluginizr.git
+   ```
+
+2. Run the installation script:
+
+   ```bash
+   cd catalyst-pluginizr
+   npx tsx src/scripts/install.ts
+   ```
+
+The script will automatically:
+
+- Add the necessary dependencies
+- Configure your workspace
+- Update Next.js and Tailwind configurations
+- Install all dependencies
+
+#### Manual Installation
+
+If you prefer to install manually or need more control over the installation process, follow these steps:
 
 1. Clone the package in your `package` folder:
 
@@ -103,7 +129,7 @@ Just a Catalyst-based project (see [Catalyst on Github](https://github.com/bigco
    pnpm install
    ```
 
-6. Get fun!
+7. Get fun!
 
 ## Plugin Development Guide
 

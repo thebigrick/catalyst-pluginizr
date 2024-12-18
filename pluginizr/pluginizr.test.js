@@ -2,7 +2,7 @@ const fs = require('node:fs');
 
 const pluginizr = require('./pluginizr');
 
-global.console.error = jest.fn();
+global.console.log = jest.fn();
 
 jest.mock('node:fs', () => ({
   existsSync: jest.fn(),
@@ -303,6 +303,11 @@ export default withPluginsVal("test-package/file", 5);`;
       const res = pluginizr(sampleCode, '/some/file.ts', true);
 
       process.env.NODE_ENV = prevNodeEnv;
+
+      expect(global.console.log).toHaveBeenCalledWith(
+        '   Applying plugins to:',
+        'test-package/file:myPluginizedFunction',
+      );
 
       expect(res)
         .toEqual(`import { withPluginsFC, withPluginsFn, withPluginsVal } from "@thebigrick/catalyst-pluginizr";

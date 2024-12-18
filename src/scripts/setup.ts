@@ -37,14 +37,12 @@ const installCatalystPluginizr = () => {
     const nextConfigPath = path.join(catalystRoot, 'core', 'next.config.ts');
     let nextConfig = fs.readFileSync(nextConfigPath, 'utf-8');
 
-    if (!nextConfig.includes('@thebigrick/catalyst-pluginizr')) {
-      nextConfig = `import { withCatalystPluginizr } from '@thebigrick/catalyst-pluginizr';\n${nextConfig}`;
-    }
-
     if (!nextConfig.includes('withCatalystPluginizr')) {
+      nextConfig = `import withCatalystPluginizr from '@thebigrick/catalyst-pluginizr/with-catalyst-pluginizr';\n${nextConfig}`;
+
       nextConfig = nextConfig.replace(
         'nextConfig = withNextIntl(nextConfig);',
-        'nextConfig = withNextIntl(nextConfig);\nnextConfig = withCatalystPluginizr(nextConfig);',
+        'nextConfig = withCatalystPluginizr(withNextIntl(nextConfig));',
       );
     }
 

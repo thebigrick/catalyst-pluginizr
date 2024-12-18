@@ -103,11 +103,15 @@ If you prefer to install manually or need more control over the installation pro
 4. Configure Next.js to use the pluginizr in `core/next.config.ts`:
 
    ```typescript
-   import { withCatalystPluginizr } from '@thebigrick/catalyst-pluginizr'; // <-- Add this line at beginning
-   //...
+   // Add this line at beginning
+   import withCatalystPluginizr from '@thebigrick/catalyst-pluginizr/with-catalyst-pluginizr';
+   
+   // ... (leave the content as is)
+   
    nextConfig = withNextIntl(nextConfig);
    nextConfig = withCatalystPluginizr(nextConfig); // <-- Add this line after withNextIntl
-   //...
+   
+   // ... (leave the content as is)
    ```
 
 5. Configure tailwind to use pluginizr in `core/tailwind.config.js`:

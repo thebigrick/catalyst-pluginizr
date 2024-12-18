@@ -122,14 +122,29 @@ If you prefer to install manually or need more control over the installation pro
    module.exports = withPluginizrTailwind(config);
    ```
 
-6. Install dependencies:
+6. Add the pluginizr path to your `core/tsconfig.json` in the `compilerOptions.paths` section, just after the `~/*` definition:
+
+   ```json
+   {
+     "compilerOptions": {
+       "paths": {
+         "~/*": [
+           "./*"
+         ],
+         "@thebigrick/catalyst-pluginizr/*": [
+           "../packages/catalyst-pluginizr/src/*"
+         ]
+       }
+     }
+   }
+   ```
+
+7. Install dependencies:
 
    ```bash
    cd /path-to-catalyst
    pnpm install
    ```
-
-7. Get fun!
 
 ## Plugin Development Guide
 

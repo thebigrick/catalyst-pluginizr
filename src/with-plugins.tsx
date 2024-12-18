@@ -1,29 +1,35 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { getFcPlugins, getFnPlugins } from './registry';
-import { AnyValue, AnyWrappedFC, ComponentPlugin, FunctionPlugin, PluginWrapperFC } from './types';
+import { AnyPlugin, getPlugins } from './registry';
+import {
+  AnyValue,
+  AnyWrappedFC,
+  ComponentPlugin,
+  FunctionPlugin,
+  PluginWrapperFC,
+  ValuePlugin,
+} from './types';
 
 /**
  * Caches sorted plugins by resourceId to improve performance at runtime.
  */
-const sortedFcPluginsCache = new Map<string, Array<ComponentPlugin<any>>>();
-const sortedFnPluginsCache = new Map<string, Array<FunctionPlugin<any>>>();
+const pluginsCache = new Map<string, AnyPlugin[]>();
 
 /**
- * Retrieves and sorts FC plugins based on sortOrder.
- * @param {string} component - The component name.
- * @returns {Array<ComponentPlugin<any>>} Sorted array of FC plugins.
+ * Retrieves and sorts plugins based on sortOrder.
+ * @param {string} resourceId - The resource ID.
+ * @returns {AnyPlugin[]} Sorted array of FC plugins.
  */
-const getSortedFcPlugins = (component: string): Array<ComponentPlugin<any>> => {
-  if (sortedFcPluginsCache.has(component)) {
+const getSortedPlugins = (resourceId: string): AnyPlugin[] => {
+  if (process.env.NODE_ENV === 'production' && pluginsCache.has(resourceId)) {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    return sortedFcPluginsCache.get(component)!;
+    return pluginsCache.get(resourceId)!;
   }
 
-  const plugins = getFcPlugins(component).slice(); // Clone to avoid mutating original
+  const plugins = getPlugins(resourceId).slice(); // Clone to avoid mutating original
 
   plugins.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-  sortedFcPluginsCache.set(component, plugins);
+  pluginsCache.set(resourceId, plugins);
 
   return plugins;
 };
@@ -39,19 +45,16 @@ export const withPluginsFC = <P extends AnyWrappedFC = AnyWrappedFC>(
   WrappedComponent: P,
 ): P => {
   const displayName = WrappedComponent.displayName || WrappedComponent.name || 'Component';
-  const plugins = getSortedFcPlugins(component);
+  const plugins = getSortedPlugins(component);
 
   if (plugins.length === 0) {
     return WrappedComponent;
   }
 
   const WithPlugins = plugins.reduce<P>((EnhancedComponent, plugin) => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`Using plugin ${plugin.name}`);
-    }
-
     const PluginWrapper: PluginWrapperFC<P> = (props) => {
-      return plugin.wrap({ ...props, WrappedComponent: EnhancedComponent });
+      // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+      return (plugin as ComponentPlugin).wrap({ ...props, WrappedComponent: EnhancedComponent });
     };
 
     PluginWrapper.displayName = `PluginWrapper(${plugin.name})`;
@@ -66,59 +69,29 @@ export const withPluginsFC = <P extends AnyWrappedFC = AnyWrappedFC>(
 };
 
 /**
- * Retrieves and sorts Fn plugins based on sortOrder.
- * @param {string} functionId - The function identifier.
- * @returns {Array<FunctionPlugin<any>>} Sorted array of Fn plugins.
- */
-const getSortedFnPlugins = (functionId: string): Array<FunctionPlugin<any>> => {
-  if (sortedFnPluginsCache.has(functionId)) {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    return sortedFnPluginsCache.get(functionId)!;
-  }
-
-  const plugins = getFnPlugins(functionId).slice(); // Clone to avoid mutating original
-
-  plugins.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-  sortedFnPluginsCache.set(functionId, plugins);
-
-  return plugins;
-};
-
-/**
  * Higher-order function that wraps a function with plugins, sorted by sortOrder.
  * @param {string} functionId - Unique identifier for the function.
  * @param {Function} wrapped - The function to be wrapped.
  * @returns {Function} - The enhanced function wrapped with all applicable plugins.
  */
 export const withPluginsFn = <T extends AnyValue = AnyValue>(functionId: string, wrapped: T): T => {
-  const plugins = getSortedFnPlugins(functionId);
+  const plugins = getSortedPlugins(functionId);
 
   if (plugins.length === 0) {
     return wrapped;
   }
 
-  if (typeof wrapped === 'function') {
-    return plugins.reduce<T>((enhancedFn, plugin) => {
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`Using plugin ${plugin.name}`);
-      }
+  return plugins.reduce<T>((enhancedFn, plugin) => {
+    type Args = T extends (...args: infer P) => any ? P : never;
 
-      type Args = T extends (...args: infer P) => any ? P : never;
-
-      // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-      return ((...args: Args) => {
-        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-        const wrappedFn = enhancedFn as (...a: Args) => any;
-
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-        return plugin.wrap(wrappedFn, ...args);
-      }) as T;
-    }, wrapped);
-  }
-
-  return plugins.reduce<T>((enhancedValue, plugin) => {
     // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-    return plugin.wrap(enhancedValue) as T;
+    return ((...args: Args) => {
+      // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+      const wrappedFn = enhancedFn as (...a: Args) => any;
+
+      // eslint-disable-next-line @typescript-eslint/consistent-type-assertions,@typescript-eslint/no-unsafe-return
+      return (plugin as FunctionPlugin).wrap(wrappedFn, ...args);
+    }) as T;
   }, wrapped);
 };
 
@@ -128,5 +101,15 @@ export const withPluginsFn = <T extends AnyValue = AnyValue>(functionId: string,
  * @param {any} value - The value to be wrapped.
  * @returns {any} - The enhanced value wrapped with all applicable plugins.
  */
-export const withPluginsVal = <T extends AnyValue = AnyValue>(valueId: string, value: T): T =>
-  withPluginsFn(valueId, value); // Delegate to withPluginsFn for now
+export const withPluginsVal = <T extends AnyValue = AnyValue>(valueId: string, value: T): T => {
+  const plugins = getSortedPlugins(valueId);
+
+  if (plugins.length === 0) {
+    return value;
+  }
+
+  return plugins.reduce<T>((enhancedValue, plugin) => {
+    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+    return (plugin as ValuePlugin).wrap(enhancedValue) as T;
+  }, value);
+};

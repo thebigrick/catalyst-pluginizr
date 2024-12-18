@@ -1,21 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { getFcPlugins, getFnPlugins, getValPlugins } from './registry';
-import {
-  AnyValue,
-  AnyWrappedFC,
-  ComponentPlugin,
-  FunctionPlugin,
-  PluginWrapperFC,
-  ValuePlugin,
-} from './types';
+import { getFcPlugins, getFnPlugins } from './registry';
+import { AnyValue, AnyWrappedFC, ComponentPlugin, FunctionPlugin, PluginWrapperFC } from './types';
 
 /**
  * Caches sorted plugins by resourceId to improve performance at runtime.
  */
 const sortedFcPluginsCache = new Map<string, Array<ComponentPlugin<any>>>();
 const sortedFnPluginsCache = new Map<string, Array<FunctionPlugin<any>>>();
-const sortedValPluginsCache = new Map<string, Array<ValuePlugin<any>>>();
 
 /**
  * Retrieves and sorts FC plugins based on sortOrder.
@@ -54,6 +46,10 @@ export const withPluginsFC = <P extends AnyWrappedFC = AnyWrappedFC>(
   }
 
   const WithPlugins = plugins.reduce<P>((EnhancedComponent, plugin) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Using plugin ${plugin.name}`);
+    }
+
     const PluginWrapper: PluginWrapperFC<P> = (props) => {
       return plugin.wrap({ ...props, WrappedComponent: EnhancedComponent });
     };
@@ -103,6 +99,10 @@ export const withPluginsFn = <T extends AnyValue = AnyValue>(functionId: string,
 
   if (typeof wrapped === 'function') {
     return plugins.reduce<T>((enhancedFn, plugin) => {
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`Using plugin ${plugin.name}`);
+      }
+
       type Args = T extends (...args: infer P) => any ? P : never;
 
       // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
@@ -123,39 +123,10 @@ export const withPluginsFn = <T extends AnyValue = AnyValue>(functionId: string,
 };
 
 /**
- * Retrieves and sorts Val plugins based on sortOrder.
- * @param {string} valueId - The value identifier.
- * @returns {Array<ValuePlugin<any>>} Sorted array of Val plugins.
- */
-const getSortedValPlugins = (valueId: string): Array<ValuePlugin<any>> => {
-  if (sortedValPluginsCache.has(valueId)) {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    return sortedValPluginsCache.get(valueId)!;
-  }
-
-  const plugins = getValPlugins(valueId).slice(); // Clone to avoid mutating original
-
-  plugins.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-  sortedValPluginsCache.set(valueId, plugins);
-
-  return plugins;
-};
-
-/**
  * Higher-order function that wraps a value with plugins, sorted by sortOrder.
  * @param {string} valueId - Unique identifier for the value.
  * @param {any} value - The value to be wrapped.
  * @returns {any} - The enhanced value wrapped with all applicable plugins.
  */
-export const withPluginsVal = <T extends AnyValue = AnyValue>(valueId: string, value: T): T => {
-  const plugins = getSortedValPlugins(valueId);
-
-  if (plugins.length === 0) {
-    return value;
-  }
-
-  return plugins.reduce<T>((enhancedValue, plugin) => {
-    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-    return plugin.wrap(enhancedValue) as T;
-  }, value);
-};
+export const withPluginsVal = <T extends AnyValue = AnyValue>(valueId: string, value: T): T =>
+  withPluginsFn(valueId, value); // Delegate to withPluginsFn for now

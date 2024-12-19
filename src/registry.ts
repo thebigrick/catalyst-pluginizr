@@ -1,16 +1,15 @@
 import {
-  AnyValue,
-  AnyWrappedFC,
-  AnyWrappedFn,
+  CatalystPlugin,
   ComponentPlugin,
   FunctionPlugin,
+  PluginWrappedComponent,
+  PluginWrappedFunction,
+  PluginWrappedValue,
   ValuePlugin,
 } from './types';
 
-export type AnyPlugin = ComponentPlugin | FunctionPlugin | ValuePlugin;
-
 /** Storage for plugins indexed by resource ID */
-const plugins: Record<string, AnyPlugin[]> = {};
+const plugins: Record<string, CatalystPlugin[]> = {};
 
 /**
  * Registers a new component plugin
@@ -18,7 +17,9 @@ const plugins: Record<string, AnyPlugin[]> = {};
  * @param {ComponentPlugin} plugin - The component plugin to register
  * @returns {void}
  */
-export const registerComponentPlugin = <TSourceComponent extends AnyWrappedFC = AnyWrappedFC>(
+export const registerComponentPlugin = <
+  TSourceComponent extends PluginWrappedComponent = PluginWrappedComponent,
+>(
   plugin: ComponentPlugin<TSourceComponent>,
 ): void => {
   plugins[plugin.resourceId] ??= [];
@@ -32,7 +33,9 @@ export const registerComponentPlugin = <TSourceComponent extends AnyWrappedFC = 
  * @param {FunctionPlugin} plugin - The function plugin to register
  * @returns {void}
  */
-export const registerFunctionPlugin = <TSourceFn extends AnyWrappedFn = AnyWrappedFn>(
+export const registerFunctionPlugin = <
+  TSourceFn extends PluginWrappedFunction = PluginWrappedFunction,
+>(
   plugin: FunctionPlugin<TSourceFn>,
 ): void => {
   plugins[plugin.resourceId] ??= [];
@@ -46,7 +49,7 @@ export const registerFunctionPlugin = <TSourceFn extends AnyWrappedFn = AnyWrapp
  * @param {ValuePlugin}  plugin - The value plugin to register
  * @returns {void}
  */
-export const registerValuePlugin = <TSourceValue extends AnyValue = AnyValue>(
+export const registerValuePlugin = <TSourceValue extends PluginWrappedValue = PluginWrappedValue>(
   plugin: ValuePlugin<TSourceValue>,
 ): void => {
   plugins[plugin.resourceId] ??= [];
@@ -57,8 +60,8 @@ export const registerValuePlugin = <TSourceValue extends AnyValue = AnyValue>(
 /**
  * Retrieves all component plugins registered for a specific component
  * @param {string} resourceId - The resource identifier
- * @returns {AnyPlugin[]} Array of plugins
+ * @returns {CatalystPlugin[]} Array of plugins
  */
-export const getPlugins = (resourceId: string): AnyPlugin[] => {
+export const getPlugins = (resourceId: string): CatalystPlugin[] => {
   return plugins[resourceId] ?? [];
 };

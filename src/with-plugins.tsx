@@ -1,13 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { AnyPlugin, getPlugins } from './registry';
+import { getPlugins } from './registry';
 import {
-  AnyValue,
-  AnyWrappedFC,
-  AnyWrappedFn,
+  CatalystPlugin,
   ComponentPlugin,
   FunctionPlugin,
-  PluginWrapperFC,
+  PluginComponentWrapper,
+  PluginWrappedComponent,
+  PluginWrappedFunction,
+  PluginWrappedValue,
   ValuePlugin,
 } from './types';
 
@@ -16,14 +17,14 @@ type Args<T> = T extends (...args: infer P) => any ? P : never;
 /**
  * Caches sorted plugins by resourceId to improve performance at runtime.
  */
-const pluginsCache = new Map<string, AnyPlugin[]>();
+const pluginsCache = new Map<string, CatalystPlugin[]>();
 
 /**
  * Retrieves and sorts plugins based on sortOrder.
  * @param {string} resourceId - The resource ID.
- * @returns {AnyPlugin[]} Sorted array of FC plugins.
+ * @returns {CatalystPlugin[]} Sorted array of FC plugins.
  */
-const getSortedPlugins = (resourceId: string): AnyPlugin[] => {
+const getSortedPlugins = (resourceId: string): CatalystPlugin[] => {
   if (process.env.NODE_ENV === 'production' && pluginsCache.has(resourceId)) {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     return pluginsCache.get(resourceId)!;
@@ -43,7 +44,7 @@ const getSortedPlugins = (resourceId: string): AnyPlugin[] => {
  * @param {React.ComponentType} WrappedComponent - The component to wrap.
  * @returns {React.ComponentType} - The enhanced component with plugins.
  */
-export const withPluginsFC = <P extends AnyWrappedFC = AnyWrappedFC>(
+export const withPluginsFC = <P extends PluginWrappedComponent = PluginWrappedComponent>(
   component: string,
   WrappedComponent: P,
 ): P => {
@@ -55,7 +56,7 @@ export const withPluginsFC = <P extends AnyWrappedFC = AnyWrappedFC>(
   }
 
   const WithPlugins = plugins.reduce<P>((EnhancedComponent, plugin) => {
-    const PluginWrapper: PluginWrapperFC<P> = (props) => {
+    const PluginWrapper: PluginComponentWrapper<P> = (props) => {
       // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
       return (plugin as ComponentPlugin).wrap({ ...props, WrappedComponent: EnhancedComponent });
     };
@@ -77,7 +78,7 @@ export const withPluginsFC = <P extends AnyWrappedFC = AnyWrappedFC>(
  * @param {Function} wrapped - The function to be wrapped.
  * @returns {Function} - The enhanced function wrapped with all applicable plugins.
  */
-export const withPluginsFn = <T extends AnyWrappedFn = AnyWrappedFn>(
+export const withPluginsFn = <T extends PluginWrappedFunction = PluginWrappedFunction>(
   functionId: string,
   wrapped: T,
 ): T => {
@@ -106,7 +107,10 @@ export const withPluginsFn = <T extends AnyWrappedFn = AnyWrappedFn>(
  * @param {any} value - The value to be wrapped.
  * @returns {any} - The enhanced value wrapped with all applicable plugins.
  */
-export const withPluginsVal = <T extends AnyValue = AnyValue>(valueId: string, value: T): T => {
+export const withPluginsVal = <T extends PluginWrappedValue = PluginWrappedValue>(
+  valueId: string,
+  value: T,
+): T => {
   const plugins = getSortedPlugins(valueId);
 
   if (plugins.length === 0) {

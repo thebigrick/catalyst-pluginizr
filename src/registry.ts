@@ -1,6 +1,7 @@
 import {
   CatalystPlugin,
   ComponentPlugin,
+  EPluginType,
   FunctionPlugin,
   PluginWrappedComponent,
   PluginWrappedFunction,
@@ -23,24 +24,30 @@ export const registerComponentPlugin = <
   plugin: ComponentPlugin<TSourceComponent>,
 ): void => {
   plugins[plugin.resourceId] ??= [];
-  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-  plugins[plugin.resourceId].push(plugin as ComponentPlugin);
+
+  plugins[plugin.resourceId].push({
+    ...plugin,
+    type: EPluginType.Component,
+  });
 };
 
 /**
  * Registers a new function plugin
- * @template TSourceFn - Type of the source function
+ * @template TSourceFunction - Type of the source function
  * @param {FunctionPlugin} plugin - The function plugin to register
  * @returns {void}
  */
 export const registerFunctionPlugin = <
-  TSourceFn extends PluginWrappedFunction = PluginWrappedFunction,
+  TSourceFunction extends PluginWrappedFunction = PluginWrappedFunction,
 >(
-  plugin: FunctionPlugin<TSourceFn>,
+  plugin: FunctionPlugin<TSourceFunction>,
 ): void => {
   plugins[plugin.resourceId] ??= [];
-  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-  plugins[plugin.resourceId].push(plugin as FunctionPlugin);
+  // @ts-expect-error - TS doesn't like the return type here
+  plugins[plugin.resourceId].push({
+    ...plugin,
+    type: EPluginType.Function,
+  });
 };
 
 /**
@@ -53,15 +60,33 @@ export const registerValuePlugin = <TSourceValue extends PluginWrappedValue = Pl
   plugin: ValuePlugin<TSourceValue>,
 ): void => {
   plugins[plugin.resourceId] ??= [];
-  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-  plugins[plugin.resourceId].push(plugin as ValuePlugin);
+
+  plugins[plugin.resourceId].push({
+    ...plugin,
+    type: EPluginType.Value,
+  });
 };
 
 /**
  * Retrieves all component plugins registered for a specific component
  * @param {string} resourceId - The resource identifier
+ * @param {EPluginType} type
  * @returns {CatalystPlugin[]} Array of plugins
  */
-export const getPlugins = (resourceId: string): CatalystPlugin[] => {
-  return plugins[resourceId] ?? [];
+export const getPlugins = (resourceId: string, type: EPluginType): CatalystPlugin[] => {
+  const res = plugins[resourceId] ?? [];
+
+  if (process.env.NODE_ENV === 'development') {
+    const invalidPlugins = res.filter((plugin) => plugin.type !== type);
+
+    if (invalidPlugins.length > 0) {
+      invalidPlugins.forEach((plugin) => {
+        console.error(
+          `Plugin type mismatch for ${plugin.resourceId}(${plugin.name}). Expected ${type}, got ${plugin.type}.`,
+        );
+      });
+    }
+  }
+
+  return res.filter((plugin) => plugin.type === type);
 };

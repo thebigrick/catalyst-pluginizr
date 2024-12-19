@@ -4,6 +4,7 @@ import { getPlugins } from './registry';
 import {
   CatalystPlugin,
   ComponentPlugin,
+  EPluginType,
   FunctionPlugin,
   PluginComponentWrapper,
   PluginWrappedComponent,
@@ -22,15 +23,16 @@ const pluginsCache = new Map<string, CatalystPlugin[]>();
 /**
  * Retrieves and sorts plugins based on sortOrder.
  * @param {string} resourceId - The resource ID.
+ * @param {EPluginType} type
  * @returns {CatalystPlugin[]} Sorted array of FC plugins.
  */
-const getSortedPlugins = (resourceId: string): CatalystPlugin[] => {
+const getSortedPlugins = (resourceId: string, type: EPluginType): CatalystPlugin[] => {
   if (process.env.NODE_ENV === 'production' && pluginsCache.has(resourceId)) {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     return pluginsCache.get(resourceId)!;
   }
 
-  const plugins = getPlugins(resourceId).slice(); // Clone to avoid mutating original
+  const plugins = getPlugins(resourceId, type).slice(); // Clone to avoid mutating original
 
   plugins.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
   pluginsCache.set(resourceId, plugins);
@@ -49,7 +51,7 @@ export const withPluginsFC = <P extends PluginWrappedComponent = PluginWrappedCo
   WrappedComponent: P,
 ): P => {
   const displayName = WrappedComponent.displayName || WrappedComponent.name || 'Component';
-  const plugins = getSortedPlugins(component);
+  const plugins = getSortedPlugins(component, EPluginType.Component);
 
   if (plugins.length === 0) {
     return WrappedComponent;
@@ -85,7 +87,7 @@ export const withPluginsFn = <T extends PluginWrappedFunction = PluginWrappedFun
   // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
   return ((...args: Args<T>): ReturnType<T> => {
     // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-    const plugins = getSortedPlugins(functionId) as Array<FunctionPlugin<T>>;
+    const plugins = getSortedPlugins(functionId, EPluginType.Function) as Array<FunctionPlugin<T>>;
 
     if (plugins.length === 0) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-return
@@ -111,7 +113,7 @@ export const withPluginsVal = <T extends PluginWrappedValue = PluginWrappedValue
   valueId: string,
   value: T,
 ): T => {
-  const plugins = getSortedPlugins(valueId);
+  const plugins = getSortedPlugins(valueId, EPluginType.Value);
 
   if (plugins.length === 0) {
     return value;

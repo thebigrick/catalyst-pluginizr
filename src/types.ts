@@ -10,6 +10,12 @@ export type PluginWrappedComponent = (React.FC<any> | ((props: any) => Promise<J
 
 export type PluginWrapper = PluginComponentWrapper | PluginFunctionWrapper | PluginValueWrapper;
 
+export enum EPluginType {
+  Component = 'component',
+  Function = 'function',
+  Value = 'value',
+}
+
 export type PluginComponentWrapper<
   TSourceComponent extends PluginWrappedComponent = PluginWrappedComponent,
 > = ((
@@ -33,21 +39,24 @@ export interface CatalystPlugin<TPluginWrapper extends PluginWrapper = PluginWra
   resourceId: string;
   sortOrder?: number;
   name: string;
+  type: EPluginType;
   wrap: TPluginWrapper;
 }
 
 export type ComponentPlugin<
   TSourceComponent extends PluginWrappedComponent = PluginWrappedComponent,
-> = CatalystPlugin<PluginComponentWrapper<TSourceComponent>>;
+> = Omit<CatalystPlugin, 'wrap' | 'type'> & {
+  wrap: PluginComponentWrapper<TSourceComponent>;
+};
 
 export type FunctionPlugin<TSourceFunction extends PluginWrappedFunction = PluginWrappedFunction> =
-  Omit<CatalystPlugin, 'wrap'> & {
+  Omit<CatalystPlugin, 'wrap' | 'type'> & {
     wrap: PluginFunctionWrapper<TSourceFunction>;
   };
 
 export type ValuePlugin<TSourceValue extends PluginWrappedValue = PluginWrappedValue> = Omit<
   CatalystPlugin,
-  'wrap'
+  'wrap' | 'type'
 > & {
   wrap: PluginValueWrapper<TSourceValue>;
 };

@@ -4,11 +4,14 @@ import { AnyPlugin, getPlugins } from './registry';
 import {
   AnyValue,
   AnyWrappedFC,
+  AnyWrappedFn,
   ComponentPlugin,
   FunctionPlugin,
   PluginWrapperFC,
   ValuePlugin,
 } from './types';
+
+type Args<T> = T extends (...args: infer P) => any ? P : never;
 
 /**
  * Caches sorted plugins by resourceId to improve performance at runtime.
@@ -74,25 +77,27 @@ export const withPluginsFC = <P extends AnyWrappedFC = AnyWrappedFC>(
  * @param {Function} wrapped - The function to be wrapped.
  * @returns {Function} - The enhanced function wrapped with all applicable plugins.
  */
-export const withPluginsFn = <T extends AnyValue = AnyValue>(functionId: string, wrapped: T): T => {
-  const plugins = getSortedPlugins(functionId);
-
-  if (plugins.length === 0) {
-    return wrapped;
-  }
-
-  return plugins.reduce<T>((enhancedFn, plugin) => {
-    type Args = T extends (...args: infer P) => any ? P : never;
-
+export const withPluginsFn = <T extends AnyWrappedFn = AnyWrappedFn>(
+  functionId: string,
+  wrapped: T,
+): T => {
+  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+  return ((...args: Args<T>): ReturnType<T> => {
     // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-    return ((...args: Args) => {
-      // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-      const wrappedFn = enhancedFn as (...a: Args) => any;
+    const plugins = getSortedPlugins(functionId) as Array<FunctionPlugin<T>>;
 
-      // eslint-disable-next-line @typescript-eslint/consistent-type-assertions,@typescript-eslint/no-unsafe-return
-      return (plugin as FunctionPlugin).wrap(wrappedFn, ...args);
-    }) as T;
-  }, wrapped);
+    if (plugins.length === 0) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+      return wrapped(...args);
+    }
+
+    // @ts-expect-error TS doesn't like the reduce here
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+    return plugins.reduce<T>((acc, plugin) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+      return (...pluginArgs: Args<T>) => plugin.wrap(acc, ...pluginArgs);
+    }, wrapped)(...args);
+  }) as T;
 };
 
 /**

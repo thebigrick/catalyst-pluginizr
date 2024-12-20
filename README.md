@@ -13,6 +13,7 @@
     - [Plugin Types](#plugin-types)
     - [Creating Your First Plugin](#creating-your-first-plugin)
     - [Plugin Execution Order](#plugin-execution-order)
+    - [Extending nextjs config](#extending-nextjs-config)
     - [Naming Conventions and Best Practices](#naming-conventions-and-best-practices)
 - [Examples](#examples)
     - [Function Plugin](#function-plugin)
@@ -322,6 +323,23 @@ registerComponentPlugin({
   sortOrder: 10,
   // ...
 });
+```
+
+### Extending nextjs config
+
+If you need to extend the Next.js configuration from a plugin, you can create a `next.wrapper.cjs` file in your plugin directory with the following example content:
+
+```javascript
+// plugins/my-first-plugin/next.wrapper.cjs
+
+const configWrapper = (nextConfig) => {
+   return {
+      ...nextConfig,
+      // Add your custom configuration here
+   };
+};
+
+module.exports = configWrapper;
 ```
 
 ### Naming Conventions and best practices

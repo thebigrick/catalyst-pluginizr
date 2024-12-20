@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import React, { JSX, ReactElement } from 'react';
+import {NextConfig} from "next";
 
 export type PluginWrappedValue = any;
 export type PluginWrappedFunction = (...args: any[]) => any;
@@ -60,3 +61,5 @@ export type ValuePlugin<TSourceValue extends PluginWrappedValue = PluginWrappedV
 > & {
   wrap: PluginValueWrapper<TSourceValue>;
 };
+
+export type NextConfigWrapper = (config: NextConfig) => NextConfig;

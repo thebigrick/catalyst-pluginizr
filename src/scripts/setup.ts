@@ -54,13 +54,13 @@ const installCatalystPluginizr = () => {
 
     if (!tailwindConfig.includes('with-pluginizr-tailwind')) {
       const tailwindPluginizrImport =
-          "const withPluginizrTailwind = require('@thebigrick/catalyst-pluginizr/pluginizr/with-pluginizr-tailwind');\n";
+        "const withPluginizrTailwind = require('@thebigrick/catalyst-pluginizr/pluginizr/with-pluginizr-tailwind');\n";
 
       tailwindConfig = tailwindPluginizrImport + tailwindConfig;
 
       tailwindConfig = tailwindConfig.replace(
-          'module.exports = config;',
-          'module.exports = withPluginizrTailwind(config);',
+        'module.exports = config;',
+        'module.exports = withPluginizrTailwind(config);',
       );
 
       fs.writeFileSync(tailwindConfigPath, tailwindConfig);

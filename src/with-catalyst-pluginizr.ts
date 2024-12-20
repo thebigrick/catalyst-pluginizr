@@ -6,6 +6,7 @@ import { NextConfig } from 'next';
 import { WebpackConfigContext } from 'next/dist/server/config-shared';
 import path from 'node:path';
 
+import composeNextConfig from './config/compose-next-config';
 import getCoreBasePath from './config/get-core-base-path';
 import getPluginsConfig from './config/get-plugins-config';
 import getSelfRoot from './config/get-self-root';
@@ -33,7 +34,15 @@ const withCatalystPluginizr = (nextConfig: NextConfig): NextConfig => {
       'Using Catalyst pluginizr by TheBigRick <riccardo.tempesta@bigcommerce.com> [turbo-mode]',
     );
 
-    return {
+    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+    const tsLoaders = (nextConfig.experimental.turbo.rules?.['./**/*.ts'] as any)?.loaders || [];
+    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+    const tsxLoaders = (nextConfig.experimental.turbo.rules?.['./**/*.tsx'] as any)?.loaders || [];
+
+    tsLoaders.push(path.resolve(getSelfRoot(), 'pluginizr/loader.js'));
+    tsxLoaders.push(path.resolve(getSelfRoot(), 'pluginizr/loader.js'));
+
+    return composeNextConfig(pluginsConfig, {
       ...nextConfig,
       experimental: {
         ...nextConfig.experimental,
@@ -42,20 +51,20 @@ const withCatalystPluginizr = (nextConfig: NextConfig): NextConfig => {
           rules: {
             ...nextConfig.experimental.turbo.rules,
             './**/*.tsx': {
-              loaders: [path.resolve(getSelfRoot(), 'pluginizr/loader.js')],
+              loaders: tsxLoaders,
             },
             './**/*.ts': {
-              loaders: [path.resolve(getSelfRoot(), 'pluginizr/loader.js')],
+              loaders: tsLoaders,
             },
           },
         },
       },
-    };
+    });
   }
 
   console.log('Using Catalyst pluginizr by TheBigRick <riccardo.tempesta@bigcommerce.com>');
 
-  return {
+  return composeNextConfig(pluginsConfig, {
     ...nextConfig,
     transpilePackages: [...(nextConfig.transpilePackages || []), ...pluginPackages],
     webpack: (config: any, context: WebpackConfigContext) => {
@@ -82,7 +91,7 @@ const withCatalystPluginizr = (nextConfig: NextConfig): NextConfig => {
 
       return config;
     },
-  };
+  });
 };
 
 export default withCatalystPluginizr;

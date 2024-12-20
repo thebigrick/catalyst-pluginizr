@@ -29,6 +29,7 @@
     "@babel/parser": "^7.26.3",
     "@babel/traverse": "^7.26.3",
     "@babel/types": "^7.26.3",
-    "@babel/generator": "^7.26.3"
+    "@babel/generator": "^7.26.3",
+    "tsx": "^4.19.2"
   }
 }

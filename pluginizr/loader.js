@@ -10,8 +10,8 @@ const pluginizr = require('./pluginizr');
 function loader(inputCode) {
   if (
     inputCode.search(/^['"]use\s*no-plugins['"]\s*;?\s*$/) !== -1 ||
-    this.resourcePath.includes('/node_modules/') ||
-    this.resourcePath.includes('/packages[/\\]catalyst-pluginizr/')
+    this.resourcePath.replace(/\\/g, '/').includes('/node_modules/') ||
+    this.resourcePath.replace(/\\/g, '/').includes('/packages/catalyst-pluginizr/') // That would be funny!
   ) {
     return inputCode;
   }

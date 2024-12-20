@@ -1,6 +1,6 @@
 {
   "name": "@thebigrick/catalyst-pluginizr",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Catalyst Pluginizer",
   "main": "src/index.ts",
   "types": "src/index.ts",

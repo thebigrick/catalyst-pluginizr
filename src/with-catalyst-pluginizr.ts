@@ -10,6 +10,7 @@ import composeNextConfig from './config/compose-next-config';
 import getCoreBasePath from './config/get-core-base-path';
 import getPluginsConfig from './config/get-plugins-config';
 import getSelfRoot from './config/get-self-root';
+import getCatalystBasePath from "./config/get-catalyst-base-path";
 
 /**
  * Enhance the Next.js configuration with Catalyst plugins support
@@ -79,7 +80,7 @@ const withCatalystPluginizr = (nextConfig: NextConfig): NextConfig => {
 
       config.module.rules.unshift({
         test: /\.tsx?$/,
-        include: [getCoreBasePath()],
+        include: [getCatalystBasePath()],
         exclude: [/node_modules/],
         use: [
           {

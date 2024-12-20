@@ -32,7 +32,7 @@ const composeNextConfig = (
           const wrapper = require(wrapperPath);
 
           if (typeof wrapper !== 'function') {
-            console.warn(`Invalid wrapper in ${wrapperPath}: expected a function`);
+            console.warn(`!!! Invalid wrapper in ${wrapperPath}: expected a function`);
 
             return null;
           }
@@ -40,7 +40,10 @@ const composeNextConfig = (
           // eslint-disable-next-line @typescript-eslint/no-unsafe-return
           return wrapper;
         } catch (error) {
-          console.warn(`Failed to import config wrapper from ${pluginConfig.packageName}:`, error);
+          console.warn(
+            `!!! Failed to import config wrapper from ${pluginConfig.packageName}:`,
+            error,
+          );
 
           return null;
         }

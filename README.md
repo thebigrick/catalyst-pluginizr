@@ -50,17 +50,17 @@ instructions.
 
 #### Automatic Installation
 
-1. Clone the package in your `packages` folder:
+1. Clone the package in your `packages` folder as submodule:
 
    ```bash
-   cd /path-to-catalyst/packages
-   git clone https://github.com/thebigrick/catalyst-pluginizr.git
+   cd /path-to-catalyst
+   git submodule add https://github.com/thebigrick/catalyst-pluginizr.git packages/catalyst-pluginizr
    ```
 
 2. Run the installation script:
 
    ```bash
-   cd catalyst-pluginizr
+   cd /path-to-catalyst/packages/catalyst-pluginizr
    npm run setup
    ```
 

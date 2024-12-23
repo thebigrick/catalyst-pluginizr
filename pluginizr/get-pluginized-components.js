@@ -11,7 +11,7 @@ let pluginizedComponents;
 const getPluginizedComponents = () => {
   if (!pluginizedComponents) {
     const searchFileExtensions = ['.js', '.jsx', '.ts', '.tsx'];
-    const searchPackageRegex = /resourceId:\s*['"](?<package>.+)['"]/g;
+    const searchPackageRegex = /resourceId:\s*['"](?<package>.+)['"]/gm;
 
     const startPath = path.resolve(__dirname, '../../../plugins');
 

@@ -11,6 +11,7 @@ function loader(inputCode) {
   if (
     inputCode.search(/^['"]use\s*no-plugins['"]\s*;?\s*$/) !== -1 ||
     this.resourcePath.replace(/\\/g, '/').includes('/node_modules/') ||
+    this.resourcePath.endsWith('.d.ts') ||
     this.resourcePath.replace(/\\/g, '/').includes('/packages/catalyst-pluginizr/') // That would be funny!
   ) {
     return inputCode;

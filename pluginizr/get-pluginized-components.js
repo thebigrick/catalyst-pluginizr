@@ -11,8 +11,7 @@ let pluginizedComponents;
 const getPluginizedComponents = () => {
   if (!pluginizedComponents) {
     const searchFileExtensions = ['.js', '.jsx', '.ts', '.tsx'];
-    const searchPackageRegex =
-      /(?<!import[^\n]*)['"](?<package>@bigcommerce\/catalyst-core\/.+?)['"]/g;
+    const searchPackageRegex = /resourceId:\s*['"](?<package>.+)['"]/gm;
 
     const startPath = path.resolve(__dirname, '../../../plugins');
 

@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { getPlugins } from './registry';
 import {
   CatalystPlugin,
   ComponentPlugin,
@@ -16,51 +15,53 @@ import {
 type Args<T> = T extends (...args: infer P) => any ? P : never;
 
 /**
- * Caches sorted plugins by resourceId to improve performance at runtime.
+ * Filters out plugins that are not of the specified type.
+ * @param {ComponentPlugin[] | FunctionPlugin[] | ValuePlugin[]} plugins
+ * @param {EPluginType} type - The type of plugin to filter.
+ * @returns {ComponentPlugin[] | FunctionPlugin[] | ValuePlugin[]} - The filtered plugins.
  */
-const pluginsCache = new Map<string, CatalystPlugin[]>();
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-constraint -- This is necessary due to a IDE bug with TypeScript
+const filterValidPlugins = <TPlugin extends any>(
+  plugins: TPlugin[],
+  type: EPluginType,
+): TPlugin[] => {
+  if (process.env.NODE_ENV === 'development') {
+    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+    const invalidPlugins = (plugins as CatalystPlugin[]).filter((plugin) => plugin.type !== type);
 
-/**
- * Retrieves and sorts plugins based on sortOrder.
- * @param {string} resourceId - The resource ID.
- * @param {EPluginType} type
- * @returns {CatalystPlugin[]} Sorted array of FC plugins.
- */
-const getSortedPlugins = (resourceId: string, type: EPluginType): CatalystPlugin[] => {
-  if (process.env.NODE_ENV === 'production' && pluginsCache.has(resourceId)) {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    return pluginsCache.get(resourceId)!;
+    if (invalidPlugins.length > 0) {
+      invalidPlugins.forEach((plugin) => {
+        console.error(
+          `Plugin type mismatch for ${plugin.resourceId}(${plugin.name}): Expected "${type}", got "${plugin.type}".`,
+        );
+      });
+    }
   }
 
-  const plugins = getPlugins(resourceId, type).slice(); // Clone to avoid mutating original
-
-  plugins.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-  pluginsCache.set(resourceId, plugins);
-
-  return plugins;
+  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+  return (plugins as CatalystPlugin[]).filter((plugin) => plugin.type === type) as TPlugin[];
 };
 
 /**
  * Higher-order component that wraps a component with plugins, sorted by sortOrder.
- * @param {string} component - The component identifier.
+ * @param {ComponentPlugin[]} plugins
  * @param {React.ComponentType} WrappedComponent - The component to wrap.
  * @returns {React.ComponentType} - The enhanced component with plugins.
  */
-export const withPluginsFC = <P extends PluginWrappedComponent = PluginWrappedComponent>(
-  component: string,
+export const withComponentPlugins = <P extends PluginWrappedComponent = PluginWrappedComponent>(
+  plugins: Array<ComponentPlugin<P>>,
   WrappedComponent: P,
 ): P => {
   const displayName = WrappedComponent.displayName || WrappedComponent.name || 'Component';
-  const plugins = getSortedPlugins(component, EPluginType.Component);
+  const validPlugins = filterValidPlugins<ComponentPlugin<P>>(plugins, EPluginType.Component);
 
-  if (plugins.length === 0) {
+  if (validPlugins.length === 0) {
     return WrappedComponent;
   }
 
-  const WithPlugins = plugins.reduce<P>((EnhancedComponent, plugin) => {
+  const WithPlugins = validPlugins.reduce<P>((EnhancedComponent, plugin) => {
     const PluginWrapper: PluginComponentWrapper<P> = (props) => {
-      // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-      return (plugin as ComponentPlugin).wrap({ ...props, WrappedComponent: EnhancedComponent });
+      return plugin.wrap({ ...props, WrappedComponent: EnhancedComponent });
     };
 
     PluginWrapper.displayName = `PluginWrapper(${plugin.name})`;
@@ -76,27 +77,26 @@ export const withPluginsFC = <P extends PluginWrappedComponent = PluginWrappedCo
 
 /**
  * Higher-order function that wraps a function with plugins, sorted by sortOrder.
- * @param {string} functionId - Unique identifier for the function.
+ * @param {FunctionPlugin[]} plugins
  * @param {Function} wrapped - The function to be wrapped.
  * @returns {Function} - The enhanced function wrapped with all applicable plugins.
  */
-export const withPluginsFn = <T extends PluginWrappedFunction = PluginWrappedFunction>(
-  functionId: string,
+export const withFunctionPlugins = <T extends PluginWrappedFunction = PluginWrappedFunction>(
+  plugins: Array<FunctionPlugin<T>>,
   wrapped: T,
 ): T => {
+  const validPlugins = filterValidPlugins<FunctionPlugin<T>>(plugins, EPluginType.Function);
+
   // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
   return ((...args: Args<T>): ReturnType<T> => {
-    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-    const plugins = getSortedPlugins(functionId, EPluginType.Function) as Array<FunctionPlugin<T>>;
-
-    if (plugins.length === 0) {
+    if (validPlugins.length === 0) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       return wrapped(...args);
     }
 
     // @ts-expect-error TS doesn't like the reduce here
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-    return plugins.reduce<T>((acc, plugin) => {
+    return validPlugins.reduce<T>((acc, plugin) => {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       return (...pluginArgs: Args<T>) => plugin.wrap(acc, ...pluginArgs);
     }, wrapped)(...args);
@@ -105,22 +105,21 @@ export const withPluginsFn = <T extends PluginWrappedFunction = PluginWrappedFun
 
 /**
  * Higher-order function that wraps a value with plugins, sorted by sortOrder.
- * @param {string} valueId - Unique identifier for the value.
+ * @param {ValuePlugin[]} plugins
  * @param {any} value - The value to be wrapped.
  * @returns {any} - The enhanced value wrapped with all applicable plugins.
  */
-export const withPluginsVal = <T extends PluginWrappedValue = PluginWrappedValue>(
-  valueId: string,
+export const withValuePlugins = <T extends PluginWrappedValue = PluginWrappedValue>(
+  plugins: Array<ValuePlugin<T>>,
   value: T,
 ): T => {
-  const plugins = getSortedPlugins(valueId, EPluginType.Value);
+  const validPlugins = filterValidPlugins<ValuePlugin<T>>(plugins, EPluginType.Value);
 
-  if (plugins.length === 0) {
+  if (validPlugins.length === 0) {
     return value;
   }
 
-  return plugins.reduce<T>((enhancedValue, plugin) => {
-    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-    return (plugin as ValuePlugin).wrap(enhancedValue) as T;
+  return validPlugins.reduce<T>((enhancedValue, plugin) => {
+    return plugin.wrap(enhancedValue);
   }, value);
 };

@@ -4,7 +4,7 @@ import path from 'node:path';
 import getPluginsBasePath from '../config/get-plugins-base-path';
 import setupPlugins from '../setup/setup-plugins';
 
-const watchFiles = ['package.json', 'tsconfig.json', 'register-plugins.ts'];
+const watchFiles = ['package.json', 'tsconfig.json', 'plugins/*.ts'];
 
 /**
  * Run the development environment

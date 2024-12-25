@@ -7,10 +7,10 @@ import { WebpackConfigContext } from 'next/dist/server/config-shared';
 import path from 'node:path';
 
 import composeNextConfig from './config/compose-next-config';
+import getCatalystBasePath from './config/get-catalyst-base-path';
 import getCoreBasePath from './config/get-core-base-path';
 import getPluginsConfig from './config/get-plugins-config';
 import getSelfRoot from './config/get-self-root';
-import getCatalystBasePath from "./config/get-catalyst-base-path";
 
 /**
  * Enhance the Next.js configuration with Catalyst plugins support
@@ -89,6 +89,12 @@ const withCatalystPluginizr = (nextConfig: NextConfig): NextConfig => {
         ],
         enforce: 'pre',
       });
+
+      // config.plugins.push(
+      //   new context.webpack.NormalModuleReplacementPlugin(/^node:/, (resource) => {
+      //     resource.request = resource.request.replace(/^node:/, '');
+      //   }),
+      // );
 
       return config;
     },

@@ -18,18 +18,14 @@ const plugins: Record<string, CatalystPlugin[]> = {};
  * @param {ComponentPlugin} plugin - The component plugin to register
  * @returns {void}
  */
-export const registerComponentPlugin = <
+export const componentPlugin = <
   TSourceComponent extends PluginWrappedComponent = PluginWrappedComponent,
 >(
   plugin: ComponentPlugin<TSourceComponent>,
-): void => {
-  plugins[plugin.resourceId] ??= [];
-
-  plugins[plugin.resourceId].push({
-    ...plugin,
-    type: EPluginType.Component,
-  });
-};
+): CatalystPlugin => ({
+  ...plugin,
+  type: EPluginType.Component,
+});
 
 /**
  * Registers a new function plugin
@@ -37,18 +33,15 @@ export const registerComponentPlugin = <
  * @param {FunctionPlugin} plugin - The function plugin to register
  * @returns {void}
  */
-export const registerFunctionPlugin = <
+export const functionPlugin = <
   TSourceFunction extends PluginWrappedFunction = PluginWrappedFunction,
 >(
   plugin: FunctionPlugin<TSourceFunction>,
-): void => {
-  plugins[plugin.resourceId] ??= [];
-  // @ts-expect-error - TS doesn't like the return type here
-  plugins[plugin.resourceId].push({
-    ...plugin,
-    type: EPluginType.Function,
-  });
-};
+  // @ts-expect-error: TS doesn't like implicit casting here
+): CatalystPlugin => ({
+  ...plugin,
+  type: EPluginType.Function,
+});
 
 /**
  * Registers a new value plugin
@@ -56,16 +49,12 @@ export const registerFunctionPlugin = <
  * @param {ValuePlugin}  plugin - The value plugin to register
  * @returns {void}
  */
-export const registerValuePlugin = <TSourceValue extends PluginWrappedValue = PluginWrappedValue>(
+export const valuePlugin = <TSourceValue extends PluginWrappedValue = PluginWrappedValue>(
   plugin: ValuePlugin<TSourceValue>,
-): void => {
-  plugins[plugin.resourceId] ??= [];
-
-  plugins[plugin.resourceId].push({
-    ...plugin,
-    type: EPluginType.Value,
-  });
-};
+): CatalystPlugin => ({
+  ...plugin,
+  type: EPluginType.Value,
+});
 
 /**
  * Retrieves all component plugins registered for a specific component

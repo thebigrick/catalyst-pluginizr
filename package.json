@@ -8,6 +8,7 @@
     "build": "npx tsx src/scripts/build.ts",
     "dev": "npx tsx src/scripts/run-dev.ts",
     "setup": "npx tsx src/scripts/setup.ts",
+    "clean": "npx tsx src/scripts/clean.ts",
     "test": "jest",
     "lint": "eslint . --ext .ts,.tsx,.js,.cjs --max-warnings 0",
     "typecheck": "tsc --noEmit"

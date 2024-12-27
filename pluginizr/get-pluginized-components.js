@@ -2,6 +2,8 @@ const glob = require('glob');
 const fs = require('node:fs');
 const path = require('node:path');
 
+const { getPluginHash } = require('./get-plugin-hash');
+
 let pluginizedComponents;
 
 /**
@@ -59,8 +61,8 @@ const getPluginPath = (file, moduleDir) => {
  * @returns {Object.<string, string[]>} Map of component IDs to array of plugin paths
  */
 const getPluginizedComponents = () => {
-  if (!pluginizedComponents) {
-    const searchPackageRegex = /resourceId:\s*['"](?<package>.+)['"]/gm;
+  if (true || !pluginizedComponents) {
+    const searchPackageRegex = /resourceId:\s*['"](?<package>.+)['"]/m;
     const startPath = path.resolve(__dirname, '../../../plugins');
     const pluginMap = new Map();
 
@@ -78,20 +80,23 @@ const getPluginizedComponents = () => {
         if (!packageName) return;
 
         const content = fs.readFileSync(file, 'utf-8');
-        const matches = content.matchAll(searchPackageRegex);
+        const match = content.match(searchPackageRegex);
 
-        // eslint-disable-next-line no-restricted-syntax
-        for (const match of matches) {
-          const resourceId = match.groups.package;
-          const pluginPath = getPluginPath(file, moduleDir);
-          const pluginId = `${packageName}/plugins/${pluginPath}`;
+        const resourceId = match.groups.package;
+        const pluginPath = getPluginPath(file, moduleDir);
+        const pluginId = `${packageName}/plugins/${pluginPath}`;
 
-          if (!pluginMap.has(resourceId)) {
-            pluginMap.set(resourceId, []);
-          }
-
-          pluginMap.get(resourceId).push(pluginId);
+        if (!pluginMap.has(resourceId)) {
+          pluginMap.set(resourceId, {
+            hash: getPluginHash(resourceId),
+            plugins: [],
+          });
         }
+
+        pluginMap.get(resourceId).plugins.push({
+          id: pluginId,
+          path: file,
+        });
       } catch (error) {
         console.error(`Error processing ${file}:`, error);
       }

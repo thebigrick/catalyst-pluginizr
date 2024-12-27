@@ -1,5 +1,5 @@
 export { withComponentPlugins, withFunctionPlugins, withValuePlugins } from './with-plugins';
-export { registerComponentPlugin, registerFunctionPlugin, registerValuePlugin } from './registry';
+export { componentPlugin, functionPlugin, valuePlugin } from './plugin-builder';
 export type {
   FunctionPlugin,
   ComponentPlugin,

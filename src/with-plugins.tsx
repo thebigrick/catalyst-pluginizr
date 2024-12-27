@@ -22,15 +22,24 @@ type Args<T> = T extends (...args: infer P) => any ? P : never;
  */
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-constraint -- This is necessary due to a IDE bug with TypeScript
 const filterValidPlugins = <TPlugin extends any>(
-  plugins: TPlugin[],
+  plugins: TPlugin[] | undefined,
   type: EPluginType,
 ): TPlugin[] => {
+  if (!plugins?.filter) {
+    return [];
+  }
+
   if (process.env.NODE_ENV === 'development') {
-    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-    const invalidPlugins = (plugins as CatalystPlugin[]).filter((plugin) => plugin.type !== type);
+    const invalidPlugins =
+      // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+      (plugins as Array<CatalystPlugin | undefined>).filter((plugin) => plugin?.type !== type);
 
     if (invalidPlugins.length > 0) {
       invalidPlugins.forEach((plugin) => {
+        if (!plugin) {
+          return;
+        }
+
         console.error(
           `Plugin type mismatch for ${plugin.resourceId}(${plugin.name}): Expected "${type}", got "${plugin.type}".`,
         );
@@ -38,8 +47,12 @@ const filterValidPlugins = <TPlugin extends any>(
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-  return (plugins as CatalystPlugin[]).filter((plugin) => plugin.type === type) as TPlugin[];
+  return (
+    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions,@typescript-eslint/no-unnecessary-condition
+    ((plugins as Array<CatalystPlugin | undefined>).filter(
+      (plugin) => plugin?.type === type,
+    ) as TPlugin[]) || []
+  );
 };
 
 /**

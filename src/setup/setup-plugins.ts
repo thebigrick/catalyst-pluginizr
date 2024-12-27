@@ -1,3 +1,4 @@
+import generatePluginProxies from './generate-plugin-proxies';
 import updateTsConfig from './update-ts-config';
 
 /**
@@ -6,6 +7,7 @@ import updateTsConfig from './update-ts-config';
  */
 const setupPlugins = (): void => {
   updateTsConfig();
+  generatePluginProxies();
 };
 
 export default setupPlugins;

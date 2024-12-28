@@ -13,7 +13,6 @@ const path = require('node:path');
 
 const { getPluginHash } = require('./get-plugin-hash');
 const { getPluginizedComponents } = require('./get-pluginized-components');
-const isBuild = require('./is-build');
 
 const packagesNameCache = {};
 const tsConfigBaseUrlCache = {};
@@ -217,27 +216,16 @@ const createPluginModuleImport = (pluginInfo) => {
  * @param {Object} loader
  * @returns {Object} The transformed AST node
  */
-const wrapExportedValue = (
-  node,
-  identifierName,
-  filename,
-  isDefaultExport,
-  loader,
-) => {
+const wrapExportedValue = (node, identifierName, filename, isDefaultExport, loader) => {
   const componentCode = getComponentCode(filename, identifierName, isDefaultExport);
   const pluginizedComponents = getPluginizedComponents();
 
-  if (!isBuild()) {
-    // Force dependency on the generated plugin module, so it gets recompiled when the plugin is added, changed or removed
-    const pluginFile = path.resolve(
-      __dirname,
-      `../src/generated/${getPluginHash(componentCode)}.ts`,
-    );
+  // Force dependency on the generated plugin module, so it gets recompiled when the plugin is added, changed or removed
+  const pluginFile = path.resolve(__dirname, `../src/generated/${getPluginHash(componentCode)}.ts`);
 
-    // console.log('   Adding dependency:', pluginFile);
-    loader.addDependency(pluginFile);
-    loader.addMissingDependency(pluginFile);
-  }
+  // console.log('   Adding dependency:', pluginFile);
+  loader.addDependency(pluginFile);
+  loader.addMissingDependency(pluginFile);
 
   // Get plugin info for this component
   const pluginInfo = pluginizedComponents[componentCode];
@@ -282,132 +270,203 @@ const wrapExportedValue = (
 };
 
 /**
- * Handles export declarations
- * @param {Object} decl
- * @param {string} filename
- * @param {boolean} isDefaultExport
- * @param {Object} loader
- * @returns {void}
+ * Handles the export of various declaration types, modifying them as needed
+ * @param {Object} ast - The AST object
+ * @param {Object} decl - The declaration object to process
+ * @param {string} filename - The file name
+ * @param {boolean} isDefaultExport - Indicates if it's a default export
+ * @param {Object} loader - The loader to use
+ * @returns {boolean} - True if changes were made, false otherwise
  */
-const handleExport = (decl, filename, isDefaultExport, loader) => {
+const handleExport = (ast, decl, filename, isDefaultExport, loader) => {
+  // Initial check for declaration presence
   const nodeDecl = decl.node.declaration;
 
   if (!nodeDecl) {
-    return;
+    return false;
   }
 
+  // Get the named reference from declaration
   const namedReference = nodeDecl.name;
 
+  // Handle different declaration types
   if (t.isVariableDeclaration(nodeDecl)) {
-    const { declarations } = nodeDecl;
-    let modified = false;
+    return handleVariableDeclaration(ast, decl, nodeDecl, filename, loader);
+  }
 
-    for (const d of declarations) {
-      const { id, init } = d;
-
-      if (t.isIdentifier(id) && init) {
-        const result = wrapExportedValue(init, id.name, filename, false, loader);
-
-        if (!result) {
-          continue;
-        }
-
-        d.init = result.node;
-        modified = true;
-
-        if (result.imports[0].importDecl) {
-          decl.insertBefore(result.imports[0].importDecl);
-        }
-      }
-    }
-
-    if (modified) {
-      decl.replaceWith(
-        t.exportNamedDeclaration(t.variableDeclaration(nodeDecl.kind, declarations), []),
-      );
-      decl.skip();
-    }
-  } else if (
-    t.isFunctionDeclaration(nodeDecl) ||
-    t.isIdentifier(nodeDecl) ||
-    t.isExpression(nodeDecl)
-  ) {
+  if (t.isFunctionDeclaration(nodeDecl) || t.isIdentifier(nodeDecl) || t.isExpression(nodeDecl)) {
     const funcName = isDefaultExport ? null : nodeDecl.id?.name;
 
     if (namedReference) {
-      const binding = decl.scope.getBinding(namedReference);
-
-      if (binding && binding.path.isVariableDeclarator()) {
-        const result = wrapExportedValue(
-          binding.path.node.init,
-          funcName,
-          filename,
-          isDefaultExport,
-          loader,
-        );
-
-        if (!result) {
-          return;
-        }
-
-        if (result.imports[0].importDecl) {
-          binding.path.parentPath.insertBefore(result.imports[0].importDecl);
-        }
-
-        binding.path.get('init').replaceWith(result.node);
-      } else if (binding && binding.path.isFunctionDeclaration()) {
-        const result = wrapExportedValue(
-          binding.path.node,
-          funcName,
-          filename,
-          isDefaultExport,
-          loader,
-        );
-
-        if (!result) {
-          return;
-        }
-
-        if (result.imports[0].importDecl) {
-          binding.path.insertBefore(result.imports[0].importDecl);
-        }
-
-        const varDecl = t.variableDeclaration('const', [
-          t.variableDeclarator(t.identifier(namedReference), result.node),
-        ]);
-
-        binding.path.replaceWith(varDecl);
-      }
-    } else {
-      const result = wrapExportedValue(
-        nodeDecl,
+      return handleNamedReference(
+        ast,
+        decl,
+        namedReference,
         funcName,
         filename,
         isDefaultExport,
         loader,
       );
-
-      if (!result) {
-        return;
-      }
-
-      if (result.imports[0].importDecl) {
-        decl.insertBefore(result.imports[0].importDecl);
-      }
-
-      if (isDefaultExport) {
-        decl.replaceWith(t.exportDefaultDeclaration(result.node));
-      } else {
-        const varDecl = t.variableDeclaration('const', [
-          t.variableDeclarator(t.identifier(nodeDecl.id?.name), result.node),
-        ]);
-
-        decl.replaceWith(t.exportNamedDeclaration(varDecl, []));
-      }
     }
 
+    return handleDirectExport(ast, decl, nodeDecl, funcName, filename, isDefaultExport, loader);
+  }
+
+  return false;
+};
+
+/**
+ * Handles variable declarations
+ * @param {Object} ast
+ * @param {Object} decl - The main declaration
+ * @param {Object} nodeDecl - The declaration node
+ * @param {string} filename - The file name
+ * @param {Object} loader - The loader to use
+ * @returns {boolean} - True if changes were made, false otherwise
+ */
+const handleVariableDeclaration = (ast, decl, nodeDecl, filename, loader) => {
+  const { declarations } = nodeDecl;
+  let modified = false;
+
+  // Process each declaration within the node
+  for (const declaration of declarations) {
+    const { id, init } = declaration;
+
+    // Only handle identifiers with initialization
+    if (t.isIdentifier(id) && init) {
+      const result = wrapExportedValue(init, id.name, filename, false, loader);
+
+      if (!result) continue;
+
+      declaration.init = result.node;
+      modified = true;
+
+      if (result.imports[0].importDecl) {
+        ast.program.body.unshift(result.imports[0].importDecl);
+        // decl.insertBefore(result.imports[0].importDecl);
+      }
+    }
+  }
+
+  if (modified) {
+    decl.replaceWith(
+      t.exportNamedDeclaration(t.variableDeclaration(nodeDecl.kind, declarations), []),
+    );
     decl.skip();
   }
+
+  return modified;
+};
+
+/**
+ * Handles named references in exportsù
+ * @param {Object} ast
+ * @param {Object} decl - The main declaration
+ * @param {string} namedReference - The reference name
+ * @param {string} funcName - The function name
+ * @param {string} filename - The file name
+ * @param {boolean} isDefaultExport - Whether this is a default export
+ * @param {Object} loader - The loader to use
+ * @returns {boolean} - True if changes were made, false otherwise
+ */
+const handleNamedReference = (
+  ast,
+  decl,
+  namedReference,
+  funcName,
+  filename,
+  isDefaultExport,
+  loader,
+) => {
+  const binding = decl.scope.getBinding(namedReference);
+
+  if (!binding) return false;
+
+  // Handle variable declarator case
+  if (binding.path.isVariableDeclarator()) {
+    const result = wrapExportedValue(
+      binding.path.node.init,
+      funcName,
+      filename,
+      isDefaultExport,
+      loader,
+    );
+
+    if (!result) return false;
+
+    if (result.imports[0].importDecl) {
+      ast.program.body.unshift(result.imports[0].importDecl);
+      // binding.path.parentPath.insertBefore(result.imports[0].importDecl);
+    }
+
+    binding.path.get('init').replaceWith(result.node);
+
+    return true;
+  }
+
+  // Handle function declaration case
+  if (binding.path.isFunctionDeclaration()) {
+    const result = wrapExportedValue(
+      binding.path.node,
+      funcName,
+      filename,
+      isDefaultExport,
+      loader,
+    );
+
+    if (!result) return false;
+
+    if (result.imports[0].importDecl) {
+      ast.program.body.unshift(result.imports[0].importDecl);
+      // binding.path.insertBefore(result.imports[0].importDecl);
+    }
+
+    const varDecl = t.variableDeclaration('const', [
+      t.variableDeclarator(t.identifier(namedReference), result.node),
+    ]);
+
+    binding.path.replaceWith(varDecl);
+
+    return true;
+  }
+
+  return false;
+};
+
+/**
+ * Handles direct exports without named references
+ * @param {Object} ast - The AST object
+ * @param {Object} decl - The main declaration
+ * @param {Object} nodeDecl - The declaration node
+ * @param {string} funcName - The function name
+ * @param {string} filename - The file name
+ * @param {boolean} isDefaultExport - Whether this is a default export
+ * @param {Object} loader - The loader to use
+ * @returns {boolean} - True if changes were made, false otherwise
+ */
+const handleDirectExport = (ast, decl, nodeDecl, funcName, filename, isDefaultExport, loader) => {
+  const result = wrapExportedValue(nodeDecl, funcName, filename, isDefaultExport, loader);
+
+  if (!result) return false;
+
+  if (result.imports[0].importDecl) {
+    ast.program.body.unshift(result.imports[0].importDecl);
+    // decl.insertBefore(result.imports[0].importDecl);
+  }
+
+  if (isDefaultExport) {
+    decl.replaceWith(t.exportDefaultDeclaration(result.node));
+  } else {
+    const varDecl = t.variableDeclaration('const', [
+      t.variableDeclarator(t.identifier(nodeDecl.id?.name), result.node),
+    ]);
+
+    decl.replaceWith(t.exportNamedDeclaration(varDecl, []));
+  }
+
+  decl.skip();
+
+  return true;
 };
 
 /**
@@ -423,6 +482,25 @@ function pluginizr(code, sourcePath, loader) {
     sourceType: 'module',
     plugins: ['jsx', 'typescript'],
   });
+
+  let isPluginized = false;
+
+  traverse(ast, {
+    ExportNamedDeclaration: (declPath) => {
+      if (handleExport(ast, declPath, sourcePath, false, loader)) {
+        isPluginized = true;
+      }
+    },
+    ExportDefaultDeclaration: (declPath) => {
+      if (handleExport(ast, declPath, sourcePath, true, loader)) {
+        isPluginized = true;
+      }
+    },
+  });
+
+  if (!isPluginized) {
+    return code;
+  }
 
   let withComponentPluginsImported = false;
   let withFunctionPluginsImported = false;
@@ -467,15 +545,6 @@ function pluginizr(code, sourcePath, loader) {
       t.importDeclaration(importSpecifiers, t.stringLiteral('@thebigrick/catalyst-pluginizr')),
     );
   }
-
-  traverse(ast, {
-    ExportNamedDeclaration: (declPath) => {
-      handleExport(declPath, sourcePath, false, loader);
-    },
-    ExportDefaultDeclaration: (declPath) => {
-      handleExport(declPath, sourcePath, true, loader);
-    },
-  });
 
   return generate(ast, {}, code).code;
 }

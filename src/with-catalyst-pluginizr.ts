@@ -8,7 +8,6 @@ import path from 'node:path';
 
 import composeNextConfig from './config/compose-next-config';
 import getCatalystBasePath from './config/get-catalyst-base-path';
-import getCoreBasePath from './config/get-core-base-path';
 import getPluginsConfig from './config/get-plugins-config';
 import getSelfRoot from './config/get-self-root';
 
@@ -73,10 +72,10 @@ const withCatalystPluginizr = (nextConfig: NextConfig): NextConfig => {
         config = nextConfig.webpack(config, context);
       }
 
-      config.resolve.alias = {
-        ...config.resolve.alias,
-        ...mapping,
-      };
+      // config.resolve.alias = {
+      //   ...config.resolve.alias,
+      //   ...mapping,
+      // };
 
       config.module.rules.unshift({
         test: /\.tsx?$/,

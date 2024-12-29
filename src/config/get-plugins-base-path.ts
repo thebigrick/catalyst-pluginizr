@@ -1,11 +1,14 @@
-import path from 'node:path';
+import path, { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 /**
  * Get the plugins base path
  * @returns {string}
  */
 const getPluginsBasePath = (): string => {
-  return path.resolve(path.join(__dirname, '../../../..', 'plugins').replace(/\\/g, '/'));
+  const selfDir = dirname(fileURLToPath(import.meta.url));
+
+  return path.resolve(path.join(selfDir, '../../../..', 'plugins').replace(/\\/g, '/'));
 };
 
 export default getPluginsBasePath;

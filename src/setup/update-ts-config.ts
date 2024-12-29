@@ -40,6 +40,8 @@ const updateTsConfig = (): void => {
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   selfTsConfig.compilerOptions.paths['~/pluginizr-loader/*'] = [`${pluginizrPath}/*`];
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+  selfTsConfig.compilerOptions.paths['@thebigrick/catalyst-pluginizr/*'] = [`./src/*`];
 
   fs.writeFileSync(selfTsConfigFile, JSON.stringify(selfTsConfig, null, 2));
 };

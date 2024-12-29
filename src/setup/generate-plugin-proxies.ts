@@ -1,7 +1,8 @@
 import fs from 'node:fs';
-import path from 'node:path';
+import path, { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-import { getPluginizedComponents } from '~/pluginizr-loader/get-pluginized-components';
+import { getPluginizedComponents } from '../config/get-pluginized-components';
 
 interface PluginizedComponent {
   hash: string;
@@ -34,11 +35,13 @@ export default [
  * @returns {void}
  */
 const generatePluginProxies = (): void => {
+  const selfDir = dirname(fileURLToPath(import.meta.url));
+
   // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
   const pluginizedComponents = getPluginizedComponents() as Record<string, PluginizedComponent>;
 
   // Create generated directory if it doesn't exist
-  const generatedDir = path.resolve(__dirname, '../generated');
+  const generatedDir = path.resolve(selfDir, '../generated');
 
   if (!fs.existsSync(generatedDir)) {
     fs.mkdirSync(generatedDir, { recursive: true });

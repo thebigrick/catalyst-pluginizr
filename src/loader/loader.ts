@@ -1,4 +1,6 @@
-const pluginizr = require('./pluginizr');
+import { LoaderContext } from 'webpack';
+
+import pluginizr from './pluginizr';
 
 /**
  * Webpack loader that wraps exported items with appropriate plugins.
@@ -7,8 +9,12 @@ const pluginizr = require('./pluginizr');
  * @param {string} inputCode - The source code to transform.
  * @returns {Promise<void>} The transformed code.
  */
-async function loader(inputCode) {
+async function loader(this: LoaderContext<unknown>, inputCode: string): Promise<void> {
   const callback = this.async();
+
+  if (!callback) {
+    throw new Error('Async loader execution is not supported');
+  }
 
   try {
     if (
@@ -26,8 +32,8 @@ async function loader(inputCode) {
 
     callback(null, result);
   } catch (error) {
-    callback(error);
+    callback(error instanceof Error ? error : new Error(String(error)));
   }
 }
 
-module.exports = loader;
+export default loader;

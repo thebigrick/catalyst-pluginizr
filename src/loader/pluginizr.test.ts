@@ -1,7 +1,26 @@
-const fs = require('node:fs');
-const pluginizr = require('./pluginizr');
+import fs from 'node:fs';
+import type { LoaderContext } from 'webpack';
 
-global.console.log = jest.fn();
+import pluginizr from './pluginizr';
+
+// Define types for mocks
+interface MockLoader extends Partial<LoaderContext<unknown>> {
+  addDependency: jest.Mock;
+  addMissingDependency: jest.Mock;
+}
+
+interface PluginInfo {
+  hash: string;
+  plugins: Array<{
+    id: string;
+    path: string;
+  }>;
+}
+
+type PluginizedComponents = Record<string, PluginInfo>;
+
+// Set up global mocks
+(global.console.log as jest.Mock) = jest.fn();
 
 jest.mock('node:fs', () => ({
   existsSync: jest.fn(),
@@ -9,85 +28,97 @@ jest.mock('node:fs', () => ({
 }));
 
 jest.mock('./get-plugin-hash', () => ({
-  getPluginHash: () => 'plugin_hash_test'
+  getPluginHash: () => 'plugin_hash_test',
 }));
 
 jest.mock('./get-pluginized-components', () => ({
-  getPluginizedComponents: () => ({
+  getPluginizedComponents: (): PluginizedComponents => ({
     'test-package/MyComponent': {
       hash: 'plugin_hash1',
       plugins: [
         {
           id: 'plugin-package/plugins/MyComponent',
-          path: '/some/path/plugin-package/plugins/MyComponent.ts'
+          path: '/some/path/plugin-package/plugins/MyComponent.ts',
         },
-      ]
+      ],
     },
     'test-package/MyComponent:NamedComponent': {
       hash: 'plugin_hash2',
       plugins: [
         {
           id: 'plugin-package/plugins/MyNamedComponent',
-          path: '/some/path/plugin-package/plugins/MyNamedComponent.ts'
+          path: '/some/path/plugin-package/plugins/MyNamedComponent.ts',
         },
-      ]
+      ],
     },
     'test-package/myFunction': {
       hash: 'plugin_hash3',
-      plugins: [{
-        id: 'plugin-package/plugins/myFunction',
-        path: '/some/path/plugin-package/plugins/myFunction.ts'
-      }]
+      plugins: [
+        {
+          id: 'plugin-package/plugins/myFunction',
+          path: '/some/path/plugin-package/plugins/myFunction.ts',
+        },
+      ],
     },
     'test-package/myFunction:func1': {
       hash: 'plugin_hash3a',
-      plugins: [{
-        id: 'plugin-package/plugins/myFunction',
-        path: '/some/path/plugin-package/plugins/myFunction.ts'
-      }]
+      plugins: [
+        {
+          id: 'plugin-package/plugins/myFunction',
+          path: '/some/path/plugin-package/plugins/myFunction.ts',
+        },
+      ],
     },
     'test-package/myFunction:func2': {
       hash: 'plugin_hash3b',
-      plugins: [{
-        id: 'plugin-package/plugins/myFunction',
-        path: '/some/path/plugin-package/plugins/myFunction.ts'
-      }]
+      plugins: [
+        {
+          id: 'plugin-package/plugins/myFunction',
+          path: '/some/path/plugin-package/plugins/myFunction.ts',
+        },
+      ],
     },
     'test-package/myGenerator': {
       hash: 'plugin_hash4',
-      plugins: [{
-        id: 'plugin-package/plugins/myGenerator',
-        path: '/some/path/plugin-package/plugins/myGenerator.ts'
-      }]
+      plugins: [
+        {
+          id: 'plugin-package/plugins/myGenerator',
+          path: '/some/path/plugin-package/plugins/myGenerator.ts',
+        },
+      ],
     },
     'test-package/myValue': {
       hash: 'plugin_hash5',
-      plugins: [{
-        id: 'plugin-package/plugins/myValue',
-        path: '/some/path/plugin-package/plugins/myValue.ts'
-      }]
-    }
-  })
+      plugins: [
+        {
+          id: 'plugin-package/plugins/myValue',
+          path: '/some/path/plugin-package/plugins/myValue.ts',
+        },
+      ],
+    },
+  }),
 }));
 
 jest.mock('./is-build', () => () => false);
 
 describe('pluginizr', () => {
-  const mockLoader = {
+  const mockLoader: MockLoader = {
     addDependency: jest.fn(),
-    addMissingDependency: jest.fn()
+    addMissingDependency: jest.fn(),
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
-    fs.existsSync.mockReturnValue(true);
-    fs.readFileSync.mockImplementation((file) => {
+    (fs.existsSync as jest.Mock).mockReturnValue(true);
+    (fs.readFileSync as jest.Mock).mockImplementation((file: string) => {
       if (file.includes('package.json')) {
         return JSON.stringify({ name: 'test-package' });
       }
+
       if (file.includes('tsconfig.json')) {
         return JSON.stringify({ compilerOptions: { baseUrl: '.' } });
       }
+
       return '';
     });
   });
@@ -101,6 +132,7 @@ describe('pluginizr', () => {
       `;
 
       const result = pluginizr(sampleCode, '/some/file.ts', mockLoader);
+
       expect(result).toEqual(sampleCode);
     });
 
@@ -112,6 +144,7 @@ describe('pluginizr', () => {
       `;
 
       const result = pluginizr(sampleCode, '/some/file.ts', mockLoader);
+
       expect(result).toEqual(sampleCode);
     });
   });
@@ -153,12 +186,17 @@ describe('pluginizr', () => {
 
       const result = pluginizr(sampleCode, '/some/MyComponent.tsx', mockLoader);
 
-      expect(result).toContain('import { withComponentPlugins, withFunctionPlugins, withValuePlugins } from "@thebigrick/catalyst-pluginizr"');
-      expect(result).toContain('import plugin_hash1 from "@thebigrick/catalyst-pluginizr/generated/plugin_hash1"');
       expect(result).toContain(
-          "const MyComponent = withComponentPlugins(plugin_hash1, () => {\n" +
-          "  return <div>Hello World</div>;\n" +
-          "});");
+        'import { withComponentPlugins, withFunctionPlugins, withValuePlugins } from "@thebigrick/catalyst-pluginizr"',
+      );
+      expect(result).toContain(
+        'import plugin_hash1 from "@thebigrick/catalyst-pluginizr/generated/plugin_hash1"',
+      );
+      expect(result).toContain(
+        'const MyComponent = withComponentPlugins(plugin_hash1, () => {\n' +
+          '  return <div>Hello World</div>;\n' +
+          '});',
+      );
     });
 
     test('should handle named export of React component', () => {
@@ -170,12 +208,17 @@ describe('pluginizr', () => {
 
       const result = pluginizr(sampleCode, '/some/MyComponent.tsx', mockLoader);
 
-      expect(result).toContain('import { withComponentPlugins, withFunctionPlugins, withValuePlugins } from "@thebigrick/catalyst-pluginizr"');
-      expect(result).toContain('import plugin_hash2 from "@thebigrick/catalyst-pluginizr/generated/plugin_hash2"');
       expect(result).toContain(
-          "export const NamedComponent = withComponentPlugins(plugin_hash2, () => {\n" +
-          "  return <div>Hello World</div>;\n" +
-          "});");
+        'import { withComponentPlugins, withFunctionPlugins, withValuePlugins } from "@thebigrick/catalyst-pluginizr"',
+      );
+      expect(result).toContain(
+        'import plugin_hash2 from "@thebigrick/catalyst-pluginizr/generated/plugin_hash2"',
+      );
+      expect(result).toContain(
+        'export const NamedComponent = withComponentPlugins(plugin_hash2, () => {\n' +
+          '  return <div>Hello World</div>;\n' +
+          '});',
+      );
     });
 
     test('should handle React component with JSX fragment', () => {
@@ -187,6 +230,7 @@ describe('pluginizr', () => {
       `;
 
       const result = pluginizr(sampleCode, '/some/MyComponent.tsx', mockLoader);
+
       expect(result).toContain('withComponentPlugins');
     });
 
@@ -202,6 +246,7 @@ describe('pluginizr', () => {
       `;
 
       const result = pluginizr(sampleCode, '/some/MyComponent.tsx', mockLoader);
+
       expect(result).toContain('withComponentPlugins');
     });
   });
@@ -216,12 +261,18 @@ describe('pluginizr', () => {
       `;
 
       const result = pluginizr(sampleCode, '/some/myFunction.ts', mockLoader);
-      expect(result).toContain('import { withComponentPlugins, withFunctionPlugins, withValuePlugins } from "@thebigrick/catalyst-pluginizr"');
-      expect(result).toContain('import plugin_hash3 from "@thebigrick/catalyst-pluginizr/generated/plugin_hash3"');
+
       expect(result).toContain(
-          'const myFunction = withFunctionPlugins(plugin_hash3, async function () {\n' +
-          '  return await Promise.resolve(\'Hello World\');\n' +
-          '});');
+        'import { withComponentPlugins, withFunctionPlugins, withValuePlugins } from "@thebigrick/catalyst-pluginizr"',
+      );
+      expect(result).toContain(
+        'import plugin_hash3 from "@thebigrick/catalyst-pluginizr/generated/plugin_hash3"',
+      );
+      expect(result).toContain(
+        'const myFunction = withFunctionPlugins(plugin_hash3, async function () {\n' +
+          "  return await Promise.resolve('Hello World');\n" +
+          '});',
+      );
     });
 
     test('should handle generator functions', () => {
@@ -233,12 +284,18 @@ describe('pluginizr', () => {
       `;
 
       const result = pluginizr(sampleCode, '/some/myGenerator.ts', mockLoader);
-      expect(result).toContain('import { withComponentPlugins, withFunctionPlugins, withValuePlugins } from "@thebigrick/catalyst-pluginizr"');
-      expect(result).toContain('import plugin_hash4 from "@thebigrick/catalyst-pluginizr/generated/plugin_hash4"');
+
       expect(result).toContain(
-          'const myGenerator = withFunctionPlugins(plugin_hash4, function* () {\n' +
-          '  yield \'Hello World\';\n' +
-          '});');
+        'import { withComponentPlugins, withFunctionPlugins, withValuePlugins } from "@thebigrick/catalyst-pluginizr"',
+      );
+      expect(result).toContain(
+        'import plugin_hash4 from "@thebigrick/catalyst-pluginizr/generated/plugin_hash4"',
+      );
+      expect(result).toContain(
+        'const myGenerator = withFunctionPlugins(plugin_hash4, function* () {\n' +
+          "  yield 'Hello World';\n" +
+          '});',
+      );
     });
 
     test('should wrap arrow function with withFunctionPlugins', () => {
@@ -251,12 +308,17 @@ describe('pluginizr', () => {
 
       const result = pluginizr(sampleCode, '/some/myFunction.ts', mockLoader);
 
-      expect(result).toContain('import { withComponentPlugins, withFunctionPlugins, withValuePlugins } from "@thebigrick/catalyst-pluginizr"');
-      expect(result).toContain('import plugin_hash3 from "@thebigrick/catalyst-pluginizr/generated/plugin_hash3"');
       expect(result).toContain(
-          'const myFunction = withFunctionPlugins(plugin_hash3, () => {\n' +
-          '  return \'Hello World\';\n' +
-          '});');
+        'import { withComponentPlugins, withFunctionPlugins, withValuePlugins } from "@thebigrick/catalyst-pluginizr"',
+      );
+      expect(result).toContain(
+        'import plugin_hash3 from "@thebigrick/catalyst-pluginizr/generated/plugin_hash3"',
+      );
+      expect(result).toContain(
+        'const myFunction = withFunctionPlugins(plugin_hash3, () => {\n' +
+          "  return 'Hello World';\n" +
+          '});',
+      );
     });
 
     test('should handle function declaration', () => {
@@ -269,12 +331,17 @@ describe('pluginizr', () => {
 
       const result = pluginizr(sampleCode, '/some/myFunction.ts', mockLoader);
 
-      expect(result).toContain('import { withComponentPlugins, withFunctionPlugins, withValuePlugins } from "@thebigrick/catalyst-pluginizr"');
-      expect(result).toContain('import plugin_hash3 from "@thebigrick/catalyst-pluginizr/generated/plugin_hash3"');
       expect(result).toContain(
-          'const myFunction = withFunctionPlugins(plugin_hash3, function () {\n' +
-          '  return \'Hello World\';\n' +
-          '});');
+        'import { withComponentPlugins, withFunctionPlugins, withValuePlugins } from "@thebigrick/catalyst-pluginizr"',
+      );
+      expect(result).toContain(
+        'import plugin_hash3 from "@thebigrick/catalyst-pluginizr/generated/plugin_hash3"',
+      );
+      expect(result).toContain(
+        'const myFunction = withFunctionPlugins(plugin_hash3, function () {\n' +
+          "  return 'Hello World';\n" +
+          '});',
+      );
     });
 
     test('should handle arrow function with implicit return', () => {
@@ -284,12 +351,16 @@ describe('pluginizr', () => {
       `;
 
       const result = pluginizr(sampleCode, '/some/myFunction.ts', mockLoader);
-      expect(result).toContain('import { withComponentPlugins, withFunctionPlugins, withValuePlugins } from "@thebigrick/catalyst-pluginizr"');
-      expect(result).toContain('import plugin_hash3 from "@thebigrick/catalyst-pluginizr/generated/plugin_hash3"');
+
       expect(result).toContain(
-          'const myFunction = withFunctionPlugins(plugin_hash3, () => {\n' +
-          '  return 42;\n' +
-          '});');
+        'import { withComponentPlugins, withFunctionPlugins, withValuePlugins } from "@thebigrick/catalyst-pluginizr"',
+      );
+      expect(result).toContain(
+        'import plugin_hash3 from "@thebigrick/catalyst-pluginizr/generated/plugin_hash3"',
+      );
+      expect(result).toContain(
+        'const myFunction = withFunctionPlugins(plugin_hash3, () => {\n' + '  return 42;\n' + '});',
+      );
     });
 
     test('should handle named exports of multiple functions', () => {
@@ -299,17 +370,26 @@ describe('pluginizr', () => {
       `;
 
       const result = pluginizr(sampleCode, '/some/myFunction.ts', mockLoader);
-      expect(result).toContain('import { withComponentPlugins, withFunctionPlugins, withValuePlugins } from "@thebigrick/catalyst-pluginizr"');
-      expect(result).toContain('import plugin_hash3a from "@thebigrick/catalyst-pluginizr/generated/plugin_hash3a"');
-      expect(result).toContain('import plugin_hash3b from "@thebigrick/catalyst-pluginizr/generated/plugin_hash3b"');
+
       expect(result).toContain(
-          'export const func1 = withFunctionPlugins(plugin_hash3a, () => {\n' +
-          '  return \'Hello\';\n' +
-          '});');
+        'import { withComponentPlugins, withFunctionPlugins, withValuePlugins } from "@thebigrick/catalyst-pluginizr"',
+      );
       expect(result).toContain(
-          'export const func2 = withFunctionPlugins(plugin_hash3b, () => {\n' +
-          '  return \'World\';\n' +
-          '});');
+        'import plugin_hash3a from "@thebigrick/catalyst-pluginizr/generated/plugin_hash3a"',
+      );
+      expect(result).toContain(
+        'import plugin_hash3b from "@thebigrick/catalyst-pluginizr/generated/plugin_hash3b"',
+      );
+      expect(result).toContain(
+        'export const func1 = withFunctionPlugins(plugin_hash3a, () => {\n' +
+          "  return 'Hello';\n" +
+          '});',
+      );
+      expect(result).toContain(
+        'export const func2 = withFunctionPlugins(plugin_hash3b, () => {\n' +
+          "  return 'World';\n" +
+          '});',
+      );
     });
   });
 
@@ -324,12 +404,15 @@ describe('pluginizr', () => {
 
       const result = pluginizr(sampleCode, '/some/myValue.ts', mockLoader);
 
-      expect(result).toContain('import { withComponentPlugins, withFunctionPlugins, withValuePlugins } from "@thebigrick/catalyst-pluginizr"');
-      expect(result).toContain('import plugin_hash5 from "@thebigrick/catalyst-pluginizr/generated/plugin_hash5"');
       expect(result).toContain(
-          'const config = withValuePlugins(plugin_hash5, {\n' +
-          '  key: \'value\'\n' +
-          '});');
+        'import { withComponentPlugins, withFunctionPlugins, withValuePlugins } from "@thebigrick/catalyst-pluginizr"',
+      );
+      expect(result).toContain(
+        'import plugin_hash5 from "@thebigrick/catalyst-pluginizr/generated/plugin_hash5"',
+      );
+      expect(result).toContain(
+        'const config = withValuePlugins(plugin_hash5, {\n' + "  key: 'value'\n" + '});',
+      );
     });
   });
 
@@ -343,15 +426,15 @@ describe('pluginizr', () => {
       pluginizr(sampleCode, '/some/MyComponent.tsx', mockLoader);
 
       expect(console.log).toHaveBeenCalledWith(
-          '   Applying plugins to:',
-          expect.stringContaining('test-package/')
+        '   Applying plugins to:',
+        expect.stringContaining('test-package/'),
       );
     });
   });
 
   describe('Error Handling', () => {
     test('should throw error when package.json is not found', () => {
-      fs.existsSync.mockReturnValue(false);
+      (fs.existsSync as jest.Mock).mockReturnValue(false);
 
       const sampleCode = `
         const MyComponent = () => <div>Test</div>;

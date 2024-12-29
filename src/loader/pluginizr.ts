@@ -4,25 +4,49 @@
  * @module @thebigrick/catalyst-pluginizr
  */
 
-const generate = require('@babel/generator').default;
-const { parse } = require('@babel/parser');
-const traverse = require('@babel/traverse').default;
-const t = require('@babel/types');
-const fs = require('node:fs');
-const path = require('node:path');
+import generate from '@babel/generator';
+import { parse } from '@babel/parser';
+import traverse from '@babel/traverse';
+import * as t from '@babel/types';
+import fs from 'node:fs';
+import path from 'node:path';
+import type { LoaderContext } from 'webpack';
 
-const { getPluginHash } = require('./get-plugin-hash');
-const { getPluginizedComponents } = require('./get-pluginized-components');
+import { getPluginHash } from '../config/get-plugin-hash';
+import { getPluginizedComponents } from '../config/get-pluginized-components';
 
-const packagesNameCache = {};
-const tsConfigBaseUrlCache = {};
+interface PluginInfo {
+  hash: string;
+  plugins: Array<{ id: string; path: string }>;
+}
+
+interface ModuleImport {
+  importDecl: t.ImportDeclaration;
+  identifier: t.Identifier;
+}
+
+interface WrapResult {
+  node: t.Expression;
+  imports: ModuleImport[];
+}
+
+interface PackageInfo {
+  packageJsonPath: string;
+  packageName: string;
+  tsconfigPath: string | null;
+  baseUrl: string | null;
+  projectRoot: string;
+}
+
+const packagesNameCache: Record<string, string> = {};
+const tsConfigBaseUrlCache: Record<string, string | null> = {};
 
 /**
  * Determines if a function node represents a React component by checking for JSX elements.
  * @param {Object} funcNode - The function node to analyze.
  * @returns {boolean} True if the function contains JSX elements.
  */
-const isReactComponentFunction = (funcNode) => {
+const isReactComponentFunction = (funcNode: t.Function): boolean => {
   let hasJSX = false;
   const bodyNode = t.isFunctionDeclaration(funcNode)
     ? [funcNode]
@@ -61,7 +85,7 @@ const isReactComponentFunction = (funcNode) => {
  * @param {string} startDir - The directory to start searching from.
  * @returns {string|null} The full path to the found file, or null if not found.
  */
-const findUp = (filename, startDir) => {
+const findUp = (filename: string, startDir: string): string | null => {
   let dir = startDir;
 
   while (dir !== path.parse(dir).root) {
@@ -82,7 +106,7 @@ const findUp = (filename, startDir) => {
  * @param {string} packageJsonPath - Path to package.json file.
  * @returns {string} Package name or 'unknown-package' if not found.
  */
-const getPackageName = (packageJsonPath) => {
+const getPackageName = (packageJsonPath: string): string => {
   if (!packagesNameCache[packageJsonPath]) {
     const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 
@@ -97,7 +121,7 @@ const getPackageName = (packageJsonPath) => {
  * @param {string|null} tsconfigPath - Path to tsconfig.json file.
  * @returns {string|null} baseUrl from compiler options or null if not found.
  */
-const getBaseUrl = (tsconfigPath) => {
+const getBaseUrl = (tsconfigPath: string | null): string | null => {
   if (!tsconfigPath) return null;
 
   if (!tsConfigBaseUrlCache[tsconfigPath]) {
@@ -114,7 +138,7 @@ const getBaseUrl = (tsconfigPath) => {
  * @param {string} filePath - File path with extension.
  * @returns {string} File path without extension.
  */
-const removeExtension = (filePath) => filePath.replace(/\.[jt]sx?$/, '');
+const removeExtension = (filePath: string): string => filePath.replace(/\.[jt]sx?$/, '');
 
 /**
  * Calculates relative path without baseUrl.
@@ -123,7 +147,11 @@ const removeExtension = (filePath) => filePath.replace(/\.[jt]sx?$/, '');
  * @param {string|null} baseUrl - Base URL from tsconfig.
  * @returns {string} Relative path using forward slashes.
  */
-const relativePathWithoutBaseUrl = (fileFullPath, projectDir, baseUrl) => {
+const relativePathWithoutBaseUrl = (
+  fileFullPath: string,
+  projectDir: string,
+  baseUrl: string | null,
+): string => {
   const relativeToProject = path.relative(path.join(projectDir, baseUrl || ''), fileFullPath);
 
   return relativeToProject.split(path.sep).join('/');
@@ -134,7 +162,8 @@ const relativePathWithoutBaseUrl = (fileFullPath, projectDir, baseUrl) => {
  * @param {string} packageJsonPath - Path to package.json.
  * @returns {string} Project root directory.
  */
-const getProjectRootFromPackageJson = (packageJsonPath) => path.dirname(packageJsonPath);
+const getProjectRootFromPackageJson = (packageJsonPath: string): string =>
+  path.dirname(packageJsonPath);
 
 /**
  * Generates component code path for plugins.
@@ -144,7 +173,11 @@ const getProjectRootFromPackageJson = (packageJsonPath) => path.dirname(packageJ
  * @returns {string} Formatted component code path.
  * @throws {Error} If package.json is not found.
  */
-const getComponentCode = (filename, identifierName, isDefaultExport = false) => {
+const getComponentCode = (
+  filename: string,
+  identifierName: string,
+  isDefaultExport = false,
+): string => {
   const absolutePath = path.isAbsolute(filename) ? filename : path.resolve(process.cwd(), filename);
   const packageJsonPath = findUp('package.json', path.dirname(absolutePath));
 
@@ -154,7 +187,7 @@ const getComponentCode = (filename, identifierName, isDefaultExport = false) => 
 
   const tsconfigPath = findUp('tsconfig.json', path.dirname(absolutePath));
 
-  const info = {
+  const info: PackageInfo = {
     packageJsonPath,
     packageName: getPackageName(packageJsonPath),
     tsconfigPath,
@@ -183,7 +216,7 @@ const getComponentCode = (filename, identifierName, isDefaultExport = false) => 
  * @param {Object} funcNode - Function node to normalize.
  * @returns {void}
  */
-const normalizeFunctionBody = (funcNode) => {
+const normalizeFunctionBody = (funcNode: t.Function): void => {
   if (
     (t.isArrowFunctionExpression(funcNode) || t.isFunctionExpression(funcNode)) &&
     !t.isBlockStatement(funcNode.body)
@@ -197,7 +230,7 @@ const normalizeFunctionBody = (funcNode) => {
  * @param {Object} pluginInfo
  * @returns {Object} Import node and its identifier
  */
-const createPluginModuleImport = (pluginInfo) => {
+const createPluginModuleImport = (pluginInfo: PluginInfo): ModuleImport => {
   const identifier = t.identifier(pluginInfo.hash);
   const importDecl = t.importDeclaration(
     [t.importDefaultSpecifier(identifier)],
@@ -216,18 +249,21 @@ const createPluginModuleImport = (pluginInfo) => {
  * @param {Object} loader
  * @returns {Object} The transformed AST node
  */
-const wrapExportedValue = (node, identifierName, filename, isDefaultExport, loader) => {
+const wrapExportedValue = (
+  node: t.Node,
+  identifierName: string,
+  filename: string,
+  isDefaultExport: boolean,
+  loader: LoaderContext<unknown>,
+): WrapResult | null => {
   const componentCode = getComponentCode(filename, identifierName, isDefaultExport);
   const pluginizedComponents = getPluginizedComponents();
 
-  // Force dependency on the generated plugin module, so it gets recompiled when the plugin is added, changed or removed
   const pluginFile = path.resolve(__dirname, `../src/generated/${getPluginHash(componentCode)}.ts`);
 
-  // console.log('   Adding dependency:', pluginFile);
   loader.addDependency(pluginFile);
   loader.addMissingDependency(pluginFile);
 
-  // Get plugin info for this component
   const pluginInfo = pluginizedComponents[componentCode];
 
   if (!pluginInfo) {
@@ -236,7 +272,6 @@ const wrapExportedValue = (node, identifierName, filename, isDefaultExport, load
 
   console.log('   Applying plugins to:', componentCode);
 
-  // Create import declaration for the generated plugin module
   const { importDecl, identifier } = createPluginModuleImport(pluginInfo);
 
   const isFunctionNode =
@@ -245,8 +280,8 @@ const wrapExportedValue = (node, identifierName, filename, isDefaultExport, load
     t.isFunctionDeclaration(node);
 
   if (isFunctionNode) {
-    const cloned = t.cloneNode(node, true);
-    const isReactComponent = isReactComponentFunction(node);
+    const cloned = t.cloneNode(node, true) as t.Function;
+    const isReactComponent = isReactComponentFunction(cloned);
 
     normalizeFunctionBody(cloned);
 
@@ -262,9 +297,8 @@ const wrapExportedValue = (node, identifierName, filename, isDefaultExport, load
     };
   }
 
-  // Not a function, wrap with withValuePlugins
   return {
-    node: t.callExpression(t.identifier('withValuePlugins'), [identifier, node]),
+    node: t.callExpression(t.identifier('withValuePlugins'), [identifier, node as t.Expression]),
     imports: [{ importDecl, identifier }],
   };
 };
@@ -278,24 +312,27 @@ const wrapExportedValue = (node, identifierName, filename, isDefaultExport, load
  * @param {Object} loader - The loader to use
  * @returns {boolean} - True if changes were made, false otherwise
  */
-const handleExport = (ast, decl, filename, isDefaultExport, loader) => {
-  // Initial check for declaration presence
-  const nodeDecl = decl.node.declaration;
+const handleExport = (
+  ast: t.File,
+  decl: traverse.NodePath<t.ExportNamedDeclaration | t.ExportDefaultDeclaration>,
+  filename: string,
+  isDefaultExport: boolean,
+  loader: LoaderContext<unknown>,
+): boolean => {
+  const nodeDecl = (decl.node as t.ExportNamedDeclaration | t.ExportDefaultDeclaration).declaration;
 
   if (!nodeDecl) {
     return false;
   }
 
-  // Get the named reference from declaration
-  const namedReference = nodeDecl.name;
+  const namedReference = (nodeDecl as t.Identifier).name;
 
-  // Handle different declaration types
   if (t.isVariableDeclaration(nodeDecl)) {
     return handleVariableDeclaration(ast, decl, nodeDecl, filename, loader);
   }
 
   if (t.isFunctionDeclaration(nodeDecl) || t.isIdentifier(nodeDecl) || t.isExpression(nodeDecl)) {
-    const funcName = isDefaultExport ? null : nodeDecl.id?.name;
+    const funcName = isDefaultExport ? null : (nodeDecl as t.FunctionDeclaration).id?.name;
 
     if (namedReference) {
       return handleNamedReference(
@@ -324,15 +361,19 @@ const handleExport = (ast, decl, filename, isDefaultExport, loader) => {
  * @param {Object} loader - The loader to use
  * @returns {boolean} - True if changes were made, false otherwise
  */
-const handleVariableDeclaration = (ast, decl, nodeDecl, filename, loader) => {
+const handleVariableDeclaration = (
+  ast: t.File,
+  decl: traverse.NodePath<t.ExportNamedDeclaration | t.ExportDefaultDeclaration>,
+  nodeDecl: t.VariableDeclaration,
+  filename: string,
+  loader: LoaderContext<unknown>,
+): boolean => {
   const { declarations } = nodeDecl;
   let modified = false;
 
-  // Process each declaration within the node
   for (const declaration of declarations) {
     const { id, init } = declaration;
 
-    // Only handle identifiers with initialization
     if (t.isIdentifier(id) && init) {
       const result = wrapExportedValue(init, id.name, filename, false, loader);
 
@@ -343,7 +384,6 @@ const handleVariableDeclaration = (ast, decl, nodeDecl, filename, loader) => {
 
       if (result.imports[0].importDecl) {
         ast.program.body.unshift(result.imports[0].importDecl);
-        // decl.insertBefore(result.imports[0].importDecl);
       }
     }
   }
@@ -359,7 +399,7 @@ const handleVariableDeclaration = (ast, decl, nodeDecl, filename, loader) => {
 };
 
 /**
- * Handles named references in exportsù
+ * Handles named references in exports
  * @param {Object} ast
  * @param {Object} decl - The main declaration
  * @param {string} namedReference - The reference name
@@ -370,23 +410,22 @@ const handleVariableDeclaration = (ast, decl, nodeDecl, filename, loader) => {
  * @returns {boolean} - True if changes were made, false otherwise
  */
 const handleNamedReference = (
-  ast,
-  decl,
-  namedReference,
-  funcName,
-  filename,
-  isDefaultExport,
-  loader,
-) => {
+  ast: t.File,
+  decl: traverse.NodePath<t.ExportNamedDeclaration | t.ExportDefaultDeclaration>,
+  namedReference: string,
+  funcName: string | null,
+  filename: string,
+  isDefaultExport: boolean,
+  loader: LoaderContext<unknown>,
+): boolean => {
   const binding = decl.scope.getBinding(namedReference);
 
   if (!binding) return false;
 
-  // Handle variable declarator case
   if (binding.path.isVariableDeclarator()) {
     const result = wrapExportedValue(
       binding.path.node.init,
-      funcName,
+      funcName || '',
       filename,
       isDefaultExport,
       loader,
@@ -396,7 +435,6 @@ const handleNamedReference = (
 
     if (result.imports[0].importDecl) {
       ast.program.body.unshift(result.imports[0].importDecl);
-      // binding.path.parentPath.insertBefore(result.imports[0].importDecl);
     }
 
     binding.path.get('init').replaceWith(result.node);
@@ -404,11 +442,10 @@ const handleNamedReference = (
     return true;
   }
 
-  // Handle function declaration case
   if (binding.path.isFunctionDeclaration()) {
     const result = wrapExportedValue(
       binding.path.node,
-      funcName,
+      funcName || '',
       filename,
       isDefaultExport,
       loader,
@@ -418,7 +455,6 @@ const handleNamedReference = (
 
     if (result.imports[0].importDecl) {
       ast.program.body.unshift(result.imports[0].importDecl);
-      // binding.path.insertBefore(result.imports[0].importDecl);
     }
 
     const varDecl = t.variableDeclaration('const', [
@@ -444,24 +480,35 @@ const handleNamedReference = (
  * @param {Object} loader - The loader to use
  * @returns {boolean} - True if changes were made, false otherwise
  */
-const handleDirectExport = (ast, decl, nodeDecl, funcName, filename, isDefaultExport, loader) => {
-  const result = wrapExportedValue(nodeDecl, funcName, filename, isDefaultExport, loader);
+const handleDirectExport = (
+  ast: t.File,
+  decl: traverse.NodePath<t.ExportNamedDeclaration | t.ExportDefaultDeclaration>,
+  nodeDecl: t.Node,
+  funcName: string | null,
+  filename: string,
+  isDefaultExport: boolean,
+  loader: LoaderContext<unknown>,
+): boolean => {
+  const result = wrapExportedValue(nodeDecl, funcName || '', filename, isDefaultExport, loader);
 
   if (!result) return false;
 
   if (result.imports[0].importDecl) {
     ast.program.body.unshift(result.imports[0].importDecl);
-    // decl.insertBefore(result.imports[0].importDecl);
   }
 
   if (isDefaultExport) {
     decl.replaceWith(t.exportDefaultDeclaration(result.node));
   } else {
-    const varDecl = t.variableDeclaration('const', [
-      t.variableDeclarator(t.identifier(nodeDecl.id?.name), result.node),
-    ]);
+    const id = (nodeDecl as t.FunctionDeclaration).id;
 
-    decl.replaceWith(t.exportNamedDeclaration(varDecl, []));
+    if (id && t.isIdentifier(id)) {
+      const varDecl = t.variableDeclaration('const', [
+        t.variableDeclarator(t.identifier(id.name), result.node),
+      ]);
+
+      decl.replaceWith(t.exportNamedDeclaration(varDecl, []));
+    }
   }
 
   decl.skip();
@@ -477,7 +524,7 @@ const handleDirectExport = (ast, decl, nodeDecl, funcName, filename, isDefaultEx
  * @param {Object} [loader] - The webpack loader context
  * @returns {string} The transformed code
  */
-function pluginizr(code, sourcePath, loader) {
+function pluginizr(code: string, sourcePath?: string, loader?: LoaderContext<unknown>): string {
   const ast = parse(code, {
     sourceType: 'module',
     plugins: ['jsx', 'typescript'],
@@ -485,14 +532,15 @@ function pluginizr(code, sourcePath, loader) {
 
   let isPluginized = false;
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-call
   traverse(ast, {
     ExportNamedDeclaration: (declPath) => {
-      if (handleExport(ast, declPath, sourcePath, false, loader)) {
+      if (handleExport(ast, declPath, sourcePath || '', false, loader)) {
         isPluginized = true;
       }
     },
     ExportDefaultDeclaration: (declPath) => {
-      if (handleExport(ast, declPath, sourcePath, true, loader)) {
+      if (handleExport(ast, declPath, sourcePath || '', true, loader)) {
         isPluginized = true;
       }
     },
@@ -520,7 +568,7 @@ function pluginizr(code, sourcePath, loader) {
     },
   });
 
-  const importSpecifiers = [];
+  const importSpecifiers: t.ImportSpecifier[] = [];
 
   if (!withComponentPluginsImported) {
     importSpecifiers.push(
@@ -549,4 +597,4 @@ function pluginizr(code, sourcePath, loader) {
   return generate(ast, {}, code).code;
 }
 
-module.exports = pluginizr;
+export default pluginizr;

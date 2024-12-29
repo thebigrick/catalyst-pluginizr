@@ -2,6 +2,7 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "display": "Default",
   "compilerOptions": {
+    "module": "ESNext",
     "baseUrl": "src",
     "composite": false,
     "declaration": true,
@@ -21,8 +22,14 @@
     "resolveJsonModule": true,
     "jsx": "react",
     "paths": {
+      "@test/my-collections/*": [
+        "../../../plugins/my-collections/src/*"
+      ],
       "~/pluginizr-loader/*": [
         "../pluginizr/*"
+      ],
+      "@thebigrick/catalyst-pluginizr/*": [
+        "./src/*"
       ]
     }
   },

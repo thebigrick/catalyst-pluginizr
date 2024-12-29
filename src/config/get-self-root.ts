@@ -1,11 +1,14 @@
-import path from 'node:path';
+import path, { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 /**
  * Get the root of the package
  * @returns {string}
  */
 const getSelfRoot = (): string => {
-  return path.resolve(path.join(__dirname, '../..').replace(/\\/g, '/'));
+  const selfDir = dirname(fileURLToPath(import.meta.url));
+
+  return path.resolve(path.join(selfDir, '../..').replace(/\\/g, '/'));
 };
 
 export default getSelfRoot;

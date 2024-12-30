@@ -1,8 +1,8 @@
-const withPluginizrTailwind = (tailwindConfig = {}) => {
+const withTailwindPluginizr = (tailwindConfig = {}) => {
   return {
     ...tailwindConfig,
     content: [...(tailwindConfig.content || []), '../plugins/**/*.{ts,tsx}'],
   };
 };
 
-module.exports = withPluginizrTailwind;
+module.exports = withTailwindPluginizr;

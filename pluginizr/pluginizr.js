@@ -1,6 +1,6 @@
 /**
  * @fileoverview A webpack loader that wraps React components and exported values with appropriate plugin systems.
- * React components are wrapped with withPluginsFC while other values (functions, classes, arrays, objects, strings, numbers, etc.) use withPluginsFn.
+ * React components are wrapped with withComponentPlugins while other values (functions, classes, arrays, objects, strings, numbers, etc.) use withFunctionPlugins.
  * @module @thebigrick/catalyst-pluginizr
  */
 
@@ -11,8 +11,8 @@ const t = require('@babel/types');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const getPluginizedComponents = require('./get-pluginized-components');
-const isBuild = require('./is-build');
+const { getPluginHash } = require('./get-plugin-hash');
+const { getPluginizedComponents } = require('./get-pluginized-components');
 
 const packagesNameCache = {};
 const tsConfigBaseUrlCache = {};
@@ -193,31 +193,52 @@ const normalizeFunctionBody = (funcNode) => {
 };
 
 /**
- * Wraps an exported value (function or otherwise) with the appropriate plugin wrapper.
- * Functions are wrapped as before:
- * - If it's a React component, use withPluginsFC.
- * - If it's a function, use withPluginsFn.
- * - If it's a value, use withPluginsVal.
- * @param {Object} node - The AST node of the exported item.
- * @param {string} identifierName - The identifier name of the variable or function being exported.
- * @param {string} filename - The source file path.
- * @param {boolean} [isDefaultExport=false] - True if it is a default export.
- * @returns {Object} The transformed AST node.
+ * Creates import declaration for the plugin module
+ * @param {Object} pluginInfo
+ * @returns {Object} Import node and its identifier
  */
-const wrapExportedValue = (node, identifierName, filename, isDefaultExport = false) => {
+const createPluginModuleImport = (pluginInfo) => {
+  const identifier = t.identifier(pluginInfo.hash);
+  const importDecl = t.importDeclaration(
+    [t.importDefaultSpecifier(identifier)],
+    t.stringLiteral(`@thebigrick/catalyst-pluginizr/generated/${pluginInfo.hash}`),
+  );
+
+  return { importDecl, identifier };
+};
+
+/**
+ * Wraps an exported value with the appropriate plugin wrapper and tracks dependencies
+ * @param {Object} node - The AST node of the exported item
+ * @param {string} identifierName - The identifier name of the variable or function being exported
+ * @param {string} filename - The source file path
+ * @param {boolean} isDefaultExport - True if it is a default export
+ * @param {Object} loader
+ * @returns {Object} The transformed AST node
+ */
+const wrapExportedValue = (node, identifierName, filename, isDefaultExport, loader) => {
   const componentCode = getComponentCode(filename, identifierName, isDefaultExport);
+  const pluginizedComponents = getPluginizedComponents();
 
-  if (isBuild()) {
-    const pluginizedComponents = getPluginizedComponents();
+  // Force dependency on the generated plugin module, so it gets recompiled when the plugin is added, changed or removed
+  const pluginFile = path.resolve(__dirname, `../src/generated/${getPluginHash(componentCode)}.ts`);
 
-    if (pluginizedComponents.includes(componentCode)) {
-      console.log('   Applying plugins to:', componentCode);
-    } else {
-      return null;
-    }
+  // console.log('   Adding dependency:', pluginFile);
+  loader.addDependency(pluginFile);
+  loader.addMissingDependency(pluginFile);
+
+  // Get plugin info for this component
+  const pluginInfo = pluginizedComponents[componentCode];
+
+  if (!pluginInfo) {
+    return null;
   }
 
-  // Check if it is a function
+  console.log('   Applying plugins to:', componentCode);
+
+  // Create import declaration for the generated plugin module
+  const { importDecl, identifier } = createPluginModuleImport(pluginInfo);
+
   const isFunctionNode =
     t.isFunctionExpression(node) ||
     t.isArrowFunctionExpression(node) ||
@@ -229,169 +250,293 @@ const wrapExportedValue = (node, identifierName, filename, isDefaultExport = fal
 
     normalizeFunctionBody(cloned);
 
-    const wrapperName = isReactComponent ? 'withPluginsFC' : 'withPluginsFn';
+    const wrapperName = isReactComponent ? 'withComponentPlugins' : 'withFunctionPlugins';
 
     const wrappedFn = t.isArrowFunctionExpression(node)
       ? t.arrowFunctionExpression(cloned.params, cloned.body, cloned.async)
       : t.functionExpression(null, cloned.params, cloned.body, cloned.generator, cloned.async);
 
-    return t.callExpression(t.identifier(wrapperName), [t.stringLiteral(componentCode), wrappedFn]);
+    return {
+      node: t.callExpression(t.identifier(wrapperName), [identifier, wrappedFn]),
+      imports: [{ importDecl, identifier }],
+    };
   }
 
-  // Not a function, wrap with withPluginsVal
-  return t.callExpression(t.identifier('withPluginsVal'), [t.stringLiteral(componentCode), node]);
+  // Not a function, wrap with withValuePlugins
+  return {
+    node: t.callExpression(t.identifier('withValuePlugins'), [identifier, node]),
+    imports: [{ importDecl, identifier }],
+  };
 };
 
 /**
- * Handles export declarations.
- * @param {Object} decl
- * @param {string} filename
- * @param {boolean} isDefaultExport
- * @returns {void}
+ * Handles the export of various declaration types, modifying them as needed
+ * @param {Object} ast - The AST object
+ * @param {Object} decl - The declaration object to process
+ * @param {string} filename - The file name
+ * @param {boolean} isDefaultExport - Indicates if it's a default export
+ * @param {Object} loader - The loader to use
+ * @returns {boolean} - True if changes were made, false otherwise
  */
-// eslint-disable-next-line complexity
-const handleExport = (decl, filename, isDefaultExport) => {
+const handleExport = (ast, decl, filename, isDefaultExport, loader) => {
+  // Initial check for declaration presence
   const nodeDecl = decl.node.declaration;
 
   if (!nodeDecl) {
-    return;
+    return false;
   }
 
+  // Get the named reference from declaration
   const namedReference = nodeDecl.name;
 
+  // Handle different declaration types
   if (t.isVariableDeclaration(nodeDecl)) {
-    const { declarations } = nodeDecl;
-    let modified = false;
+    return handleVariableDeclaration(ast, decl, nodeDecl, filename, loader);
+  }
 
-    // eslint-disable-next-line no-restricted-syntax
-    for (const d of declarations) {
-      const { id, init } = d;
-
-      if (t.isIdentifier(id) && init) {
-        const wrapped = wrapExportedValue(init, id.name, filename);
-
-        if (!wrapped) {
-          // eslint-disable-next-line no-continue
-          continue;
-        }
-
-        d.init = wrapped;
-        modified = true;
-      }
-    }
-
-    if (modified) {
-      decl.replaceWith(
-        t.exportNamedDeclaration(t.variableDeclaration(nodeDecl.kind, declarations), []),
-      );
-      decl.skip();
-    }
-  } else if (
-    t.isFunctionDeclaration(nodeDecl) ||
-    t.isIdentifier(nodeDecl) ||
-    t.isExpression(nodeDecl)
-  ) {
+  if (t.isFunctionDeclaration(nodeDecl) || t.isIdentifier(nodeDecl) || t.isExpression(nodeDecl)) {
     const funcName = isDefaultExport ? null : nodeDecl.id?.name;
 
     if (namedReference) {
-      const binding = decl.scope.getBinding(namedReference);
-
-      if (binding && binding.path.isVariableDeclarator()) {
-        const wrapped = wrapExportedValue(
-          binding.path.node.init,
-          funcName,
-          filename,
-          isDefaultExport,
-        );
-
-        if (!wrapped) {
-          return;
-        }
-
-        binding.path.get('init').replaceWith(wrapped);
-      } else if (binding && binding.path.isFunctionDeclaration()) {
-        const wrapped = wrapExportedValue(binding.path.node, funcName, filename, isDefaultExport);
-
-        if (!wrapped) {
-          return;
-        }
-
-        const varDecl = t.variableDeclaration('const', [
-          t.variableDeclarator(t.identifier(namedReference), wrapped),
-        ]);
-
-        binding.path.replaceWith(varDecl);
-      }
-    } else {
-      const wrapped = wrapExportedValue(nodeDecl, funcName, filename, isDefaultExport);
-
-      if (!wrapped) {
-        return;
-      }
-
-      if (isDefaultExport) {
-        decl.replaceWith(t.exportDefaultDeclaration(wrapped));
-      } else {
-        const varDecl = t.variableDeclaration('const', [
-          t.variableDeclarator(t.identifier(nodeDecl.id?.name), wrapped),
-        ]);
-
-        decl.replaceWith(t.exportNamedDeclaration(varDecl, []));
-      }
+      return handleNamedReference(
+        ast,
+        decl,
+        namedReference,
+        funcName,
+        filename,
+        isDefaultExport,
+        loader,
+      );
     }
 
-    decl.skip();
+    return handleDirectExport(ast, decl, nodeDecl, funcName, filename, isDefaultExport, loader);
   }
+
+  return false;
 };
 
 /**
- * Wraps exported values with plugins.
- * @param {string} code - The source code.
- * @param {string} filename - The file name.
- * @returns {string} The transformed code with wrapped exports.
+ * Handles variable declarations
+ * @param {Object} ast
+ * @param {Object} decl - The main declaration
+ * @param {Object} nodeDecl - The declaration node
+ * @param {string} filename - The file name
+ * @param {Object} loader - The loader to use
+ * @returns {boolean} - True if changes were made, false otherwise
  */
-const pluginizr = (code, filename) => {
+const handleVariableDeclaration = (ast, decl, nodeDecl, filename, loader) => {
+  const { declarations } = nodeDecl;
+  let modified = false;
+
+  // Process each declaration within the node
+  for (const declaration of declarations) {
+    const { id, init } = declaration;
+
+    // Only handle identifiers with initialization
+    if (t.isIdentifier(id) && init) {
+      const result = wrapExportedValue(init, id.name, filename, false, loader);
+
+      if (!result) continue;
+
+      declaration.init = result.node;
+      modified = true;
+
+      if (result.imports[0].importDecl) {
+        ast.program.body.unshift(result.imports[0].importDecl);
+        // decl.insertBefore(result.imports[0].importDecl);
+      }
+    }
+  }
+
+  if (modified) {
+    decl.replaceWith(
+      t.exportNamedDeclaration(t.variableDeclaration(nodeDecl.kind, declarations), []),
+    );
+    decl.skip();
+  }
+
+  return modified;
+};
+
+/**
+ * Handles named references in exportsù
+ * @param {Object} ast
+ * @param {Object} decl - The main declaration
+ * @param {string} namedReference - The reference name
+ * @param {string} funcName - The function name
+ * @param {string} filename - The file name
+ * @param {boolean} isDefaultExport - Whether this is a default export
+ * @param {Object} loader - The loader to use
+ * @returns {boolean} - True if changes were made, false otherwise
+ */
+const handleNamedReference = (
+  ast,
+  decl,
+  namedReference,
+  funcName,
+  filename,
+  isDefaultExport,
+  loader,
+) => {
+  const binding = decl.scope.getBinding(namedReference);
+
+  if (!binding) return false;
+
+  // Handle variable declarator case
+  if (binding.path.isVariableDeclarator()) {
+    const result = wrapExportedValue(
+      binding.path.node.init,
+      funcName,
+      filename,
+      isDefaultExport,
+      loader,
+    );
+
+    if (!result) return false;
+
+    if (result.imports[0].importDecl) {
+      ast.program.body.unshift(result.imports[0].importDecl);
+      // binding.path.parentPath.insertBefore(result.imports[0].importDecl);
+    }
+
+    binding.path.get('init').replaceWith(result.node);
+
+    return true;
+  }
+
+  // Handle function declaration case
+  if (binding.path.isFunctionDeclaration()) {
+    const result = wrapExportedValue(
+      binding.path.node,
+      funcName,
+      filename,
+      isDefaultExport,
+      loader,
+    );
+
+    if (!result) return false;
+
+    if (result.imports[0].importDecl) {
+      ast.program.body.unshift(result.imports[0].importDecl);
+      // binding.path.insertBefore(result.imports[0].importDecl);
+    }
+
+    const varDecl = t.variableDeclaration('const', [
+      t.variableDeclarator(t.identifier(namedReference), result.node),
+    ]);
+
+    binding.path.replaceWith(varDecl);
+
+    return true;
+  }
+
+  return false;
+};
+
+/**
+ * Handles direct exports without named references
+ * @param {Object} ast - The AST object
+ * @param {Object} decl - The main declaration
+ * @param {Object} nodeDecl - The declaration node
+ * @param {string} funcName - The function name
+ * @param {string} filename - The file name
+ * @param {boolean} isDefaultExport - Whether this is a default export
+ * @param {Object} loader - The loader to use
+ * @returns {boolean} - True if changes were made, false otherwise
+ */
+const handleDirectExport = (ast, decl, nodeDecl, funcName, filename, isDefaultExport, loader) => {
+  const result = wrapExportedValue(nodeDecl, funcName, filename, isDefaultExport, loader);
+
+  if (!result) return false;
+
+  if (result.imports[0].importDecl) {
+    ast.program.body.unshift(result.imports[0].importDecl);
+    // decl.insertBefore(result.imports[0].importDecl);
+  }
+
+  if (isDefaultExport) {
+    decl.replaceWith(t.exportDefaultDeclaration(result.node));
+  } else {
+    const varDecl = t.variableDeclaration('const', [
+      t.variableDeclarator(t.identifier(nodeDecl.id?.name), result.node),
+    ]);
+
+    decl.replaceWith(t.exportNamedDeclaration(varDecl, []));
+  }
+
+  decl.skip();
+
+  return true;
+};
+
+/**
+ * Main pluginizr function
+ * This function is called by webpack for each module that needs transformation
+ * @param {string} code - The source code to transform
+ * @param {string} [sourcePath] - The source file path (for webpack loaders)
+ * @param {Object} [loader] - The webpack loader context
+ * @returns {string} The transformed code
+ */
+function pluginizr(code, sourcePath, loader) {
   const ast = parse(code, {
     sourceType: 'module',
     plugins: ['jsx', 'typescript'],
   });
 
-  let withPluginsFCImported = false;
-  let withPluginsFnImported = false;
-  let withPluginsValImported = false;
+  let isPluginized = false;
+
+  traverse(ast, {
+    ExportNamedDeclaration: (declPath) => {
+      if (handleExport(ast, declPath, sourcePath, false, loader)) {
+        isPluginized = true;
+      }
+    },
+    ExportDefaultDeclaration: (declPath) => {
+      if (handleExport(ast, declPath, sourcePath, true, loader)) {
+        isPluginized = true;
+      }
+    },
+  });
+
+  if (!isPluginized) {
+    return code;
+  }
+
+  let withComponentPluginsImported = false;
+  let withFunctionPluginsImported = false;
+  let withValuePluginsImported = false;
 
   traverse(ast, {
     ImportDeclaration: (declPath) => {
       if (declPath.node.source.value === '@thebigrick/catalyst-pluginizr') {
         declPath.node.specifiers.forEach((spec) => {
           if (t.isImportSpecifier(spec)) {
-            if (spec.imported.name === 'withPluginsFC') withPluginsFCImported = true;
-            if (spec.imported.name === 'withPluginsFn') withPluginsFnImported = true;
-            if (spec.imported.name === 'withPluginsVal') withPluginsValImported = true;
+            if (spec.imported.name === 'withComponentPlugins') withComponentPluginsImported = true;
+            if (spec.imported.name === 'withFunctionPlugins') withFunctionPluginsImported = true;
+            if (spec.imported.name === 'withValuePlugins') withValuePluginsImported = true;
           }
         });
       }
     },
   });
 
-  // Add necessary imports if not present
   const importSpecifiers = [];
 
-  if (!withPluginsFCImported) {
+  if (!withComponentPluginsImported) {
     importSpecifiers.push(
-      t.importSpecifier(t.identifier('withPluginsFC'), t.identifier('withPluginsFC')),
+      t.importSpecifier(t.identifier('withComponentPlugins'), t.identifier('withComponentPlugins')),
     );
   }
 
-  if (!withPluginsFnImported) {
+  if (!withFunctionPluginsImported) {
     importSpecifiers.push(
-      t.importSpecifier(t.identifier('withPluginsFn'), t.identifier('withPluginsFn')),
+      t.importSpecifier(t.identifier('withFunctionPlugins'), t.identifier('withFunctionPlugins')),
     );
   }
 
-  if (!withPluginsValImported) {
+  if (!withValuePluginsImported) {
     importSpecifiers.push(
-      t.importSpecifier(t.identifier('withPluginsVal'), t.identifier('withPluginsVal')),
+      t.importSpecifier(t.identifier('withValuePlugins'), t.identifier('withValuePlugins')),
     );
   }
 
@@ -401,16 +546,7 @@ const pluginizr = (code, filename) => {
     );
   }
 
-  traverse(ast, {
-    ExportNamedDeclaration: (declPath) => {
-      handleExport(declPath, filename, false);
-    },
-    ExportDefaultDeclaration: (declPath) => {
-      handleExport(declPath, filename, true);
-    },
-  });
-
   return generate(ast, {}, code).code;
-};
+}
 
 module.exports = pluginizr;

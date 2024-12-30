@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { NextConfig } from 'next';
 import React, { JSX, ReactElement } from 'react';
-import {NextConfig} from "next";
 
 export type PluginWrappedValue = any;
 export type PluginWrappedFunction = (...args: any[]) => any;

@@ -1,65 +1,111 @@
+const glob = require('glob');
 const fs = require('node:fs');
 const path = require('node:path');
+
+const { getPluginHash } = require('./get-plugin-hash');
 
 let pluginizedComponents;
 
 /**
- * Extracts module paths from files in the given directory and its subdirectories
- * Used only for build time to reduce the HOC fingerprinting overhead
- * @returns {string[]} Array of found module paths
+ * Clears the cached pluginized components
+ * @returns {void}
+ */
+const clearPluginizedComponents = () => {
+  pluginizedComponents = undefined;
+};
+
+/**
+ * Safely reads and parses a JSON file
+ * @param {string} filePath - Path to the JSON file
+ * @returns {Object|null} Parsed JSON content or null if error
+ */
+const readJsonFile = (filePath) => {
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+  } catch (error) {
+    console.error(`Error reading ${filePath}:`, error);
+
+    return null;
+  }
+};
+
+/**
+ * Gets package name and tsconfig baseUrl for a module
+ * @param {string} moduleDir - Module directory path
+ * @returns {Object} Module configuration
+ */
+const getModuleConfig = (moduleDir) => {
+  const packageJson = readJsonFile(path.join(moduleDir, '../../package.json'));
+  const tsconfig = readJsonFile(path.join(moduleDir, '../../tsconfig.json'));
+
+  return {
+    packageName: packageJson?.name,
+    baseUrl: tsconfig?.compilerOptions?.baseUrl || '.',
+  };
+};
+
+/**
+ * Gets normalized plugin path relative to module directory
+ * @param {string} file - Plugin file path
+ * @param {string} moduleDir - Module directory path
+ * @returns {string} Normalized plugin path
+ */
+const getPluginPath = (file, moduleDir) => {
+  const relativePath = path.relative(moduleDir, file);
+
+  return relativePath.replace(/\\/g, '/').replace(/\.[^/.]+$/, '');
+};
+
+/**
+ * Maps pluginized components to their plugin implementations
+ * @returns {Object.<string, string[]>} Map of component IDs to array of plugin paths
  */
 const getPluginizedComponents = () => {
-  if (!pluginizedComponents) {
-    const searchFileExtensions = ['.js', '.jsx', '.ts', '.tsx'];
-    const searchPackageRegex = /resourceId:\s*['"](?<package>.+)['"]/gm;
-
+  if (true || !pluginizedComponents) {
+    const searchPackageRegex = /resourceId:\s*['"](?<package>.+)['"]/m;
     const startPath = path.resolve(__dirname, '../../../plugins');
+    const pluginMap = new Map();
 
-    console.log('   Searching plugins in:', startPath);
+    const pluginFiles = glob.sync('**/plugins/*.{ts,tsx,js,jsx}', {
+      cwd: startPath,
+      ignore: ['**/node_modules/**', '**/dist/**', '**/build/**'],
+      absolute: true,
+    });
 
-    const modulePaths = new Set();
-
-    const scanDirectory = (dirPath) => {
+    pluginFiles.forEach((file) => {
       try {
-        const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+        const moduleDir = path.dirname(file);
+        const { packageName } = getModuleConfig(moduleDir);
 
-        // eslint-disable-next-line no-restricted-syntax
-        for (const entry of entries) {
-          const fullPath = path.join(dirPath, entry.name);
+        if (!packageName) return;
 
-          if (entry.name === 'node_modules') {
-            // eslint-disable-next-line no-continue
-            continue;
-          }
+        const content = fs.readFileSync(file, 'utf-8');
+        const match = content.match(searchPackageRegex);
 
-          if (entry.isDirectory()) {
-            scanDirectory(fullPath);
-          } else if (entry.isFile() && searchFileExtensions.includes(path.extname(entry.name))) {
-            const content = fs.readFileSync(fullPath, 'utf-8');
+        const resourceId = match.groups.package;
+        const pluginPath = getPluginPath(file, moduleDir);
+        const pluginId = `${packageName}/plugins/${pluginPath}`;
 
-            // Search for module paths using regular expressions
-            const match = content.matchAll(searchPackageRegex);
-
-            if (match) {
-              // eslint-disable-next-line no-restricted-syntax
-              for (const m of match) {
-                console.log('   Found plugin for:', m.groups.package);
-                modulePaths.add(m.groups.package);
-              }
-            }
-          }
+        if (!pluginMap.has(resourceId)) {
+          pluginMap.set(resourceId, {
+            hash: getPluginHash(resourceId),
+            plugins: [],
+          });
         }
+
+        pluginMap.get(resourceId).plugins.push({
+          id: pluginId,
+          path: file,
+        });
       } catch (error) {
-        console.error(`Error scanning directory ${dirPath}:`, error);
+        console.error(`Error processing ${file}:`, error);
       }
-    };
+    });
 
-    scanDirectory(startPath);
-
-    pluginizedComponents = Array.from(modulePaths);
+    pluginizedComponents = Object.fromEntries(pluginMap);
   }
 
   return pluginizedComponents;
 };
 
-module.exports = getPluginizedComponents;
+module.exports = { getPluginizedComponents, clearPluginizedComponents };

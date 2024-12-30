@@ -5,6 +5,7 @@ import path from 'path';
 
 const installCatalystPluginizr = () => {
   const catalystRoot = path.resolve(__dirname, '../../../../');
+  const selfRoot = path.resolve(__dirname, '../../');
 
   try {
     console.log('🚀 Starting Catalyst Pluginizr installation...');
@@ -37,7 +38,7 @@ const installCatalystPluginizr = () => {
     const nextConfigPath = path.join(catalystRoot, 'core', 'next.config.ts');
     let nextConfig = fs.readFileSync(nextConfigPath, 'utf-8');
 
-    if (!nextConfig.includes('with-catalyst-pluginizr')) {
+    if (!nextConfig.includes('@thebigrick/catalyst-pluginizr/with-catalyst-pluginizr')) {
       nextConfig = `import withCatalystPluginizr from '@thebigrick/catalyst-pluginizr/with-catalyst-pluginizr';\n${nextConfig}`;
 
       nextConfig = nextConfig.replace(
@@ -52,35 +53,44 @@ const installCatalystPluginizr = () => {
     const tailwindConfigPath = path.join(catalystRoot, 'core', 'tailwind.config.js');
     let tailwindConfig = fs.readFileSync(tailwindConfigPath, 'utf-8');
 
-    if (!tailwindConfig.includes('with-pluginizr-tailwind')) {
+    if (
+      !tailwindConfig.includes('@thebigrick/catalyst-pluginizr/with-tailwind-pluginizr')
+    ) {
       const tailwindPluginizrImport =
-        "const withPluginizrTailwind = require('@thebigrick/catalyst-pluginizr/pluginizr/with-pluginizr-tailwind');\n";
+        "const withTailwindPluginizr = require('@thebigrick/catalyst-pluginizr/with-tailwind-pluginizr');\n";
 
       tailwindConfig = tailwindPluginizrImport + tailwindConfig;
 
       tailwindConfig = tailwindConfig.replace(
         'module.exports = config;',
-        'module.exports = withPluginizrTailwind(config);',
+        'module.exports = withTailwindPluginizr(config);',
       );
 
       fs.writeFileSync(tailwindConfigPath, tailwindConfig);
       console.log('✓ Updated tailwind.config.js');
     }
 
-    const tsconfigPath = path.join(catalystRoot, 'core', 'tsconfig.json');
-    const tsconfig = JSON.parse(fs.readFileSync(tsconfigPath, 'utf-8'));
+    // const tsconfigPath = path.join(catalystRoot, 'core', 'tsconfig.json');
+    // const tsconfig = JSON.parse(fs.readFileSync(tsconfigPath, 'utf-8'));
+    //
+    // tsconfig.compilerOptions = tsconfig.compilerOptions || {};
+    // tsconfig.compilerOptions.paths = tsconfig.compilerOptions.paths || {};
+    //
+    // if (!tsconfig.compilerOptions.paths['@thebigrick/catalyst-pluginizr/*']) {
+    //   tsconfig.compilerOptions.paths['@thebigrick/catalyst-pluginizr/*'] = [
+    //     '../packages/catalyst-pluginizr/src/*',
+    //   ];
+    // }
+    //
+    // fs.writeFileSync(tsconfigPath, JSON.stringify(tsconfig, null, 2));
+    // console.log('✓ Updated core tsconfig.json');
 
-    tsconfig.compilerOptions = tsconfig.compilerOptions || {};
-    tsconfig.compilerOptions.paths = tsconfig.compilerOptions.paths || {};
+    // Copy ./tsconfig.source.json to ./tsconfig.json
+    const tsconfigSourcePath = path.join(selfRoot, 'tsconfig.source.json');
+    const tsconfigDestPath = path.join(selfRoot, 'tsconfig.json');
 
-    if (!tsconfig.compilerOptions.paths['@thebigrick/catalyst-pluginizr/*']) {
-      tsconfig.compilerOptions.paths['@thebigrick/catalyst-pluginizr/*'] = [
-        '../packages/catalyst-pluginizr/src/*',
-      ];
-    }
-
-    fs.writeFileSync(tsconfigPath, JSON.stringify(tsconfig, null, 2));
-    console.log('✓ Updated tsconfig.json');
+    fs.copyFileSync(tsconfigSourcePath, tsconfigDestPath);
+    console.log('✓ Copied tsconfig.source.json to tsconfig.json');
 
     if (!fs.existsSync(path.join(catalystRoot, 'plugins'))) {
       fs.mkdirSync(path.join(catalystRoot, 'plugins'));

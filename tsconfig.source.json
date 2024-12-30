@@ -20,7 +20,11 @@
     "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo.json",
     "resolveJsonModule": true,
     "jsx": "react",
-    "paths": {}
+    "paths": {
+      "~/pluginizr-loader/*": [
+        "../pluginizr/*"
+      ]
+    }
   },
   "exclude": [
     "node_modules"

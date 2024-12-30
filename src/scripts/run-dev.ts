@@ -1,10 +1,7 @@
 import { watch } from 'chokidar';
-import path from 'node:path';
 
 import getPluginsBasePath from '../config/get-plugins-base-path';
 import setupPlugins from '../setup/setup-plugins';
-
-const watchFiles = ['package.json', 'tsconfig.json', 'register-plugins.ts'];
 
 /**
  * Run the development environment
@@ -14,42 +11,47 @@ const runDev = (): void => {
   setupPlugins();
 
   const targetFolder = getPluginsBasePath();
-  const watchPatterns = [
-    targetFolder,
-    ...watchFiles.map((file) => path.join(targetFolder, '**', file)),
-  ];
 
-  const watcher = watch(watchPatterns, {
+  const watcher = watch([targetFolder], {
     persistent: true,
     ignoreInitial: true,
-    ignored: /node_modules/,
+    ignored: [/[/\\](\.git|dist|build|\.next|\.turbo|node_modules)[/\\]?/],
     awaitWriteFinish: {
       stabilityThreshold: 2000,
       pollInterval: 100,
     },
   });
 
+  const isPluginFile = (file: string): boolean =>
+    /\/plugins\/[^/]+\.tsx?/.exec(file.replace(/\\/g, '/')) !== null;
+
   watcher
     .on('add', (file: string) => {
-      const fileName = path.basename(file);
-
-      if (watchFiles.includes(fileName)) {
-        setupPlugins();
+      if (!isPluginFile(file)) {
+        return;
       }
+
+      // console.log(`File ${file} has been added`);
+
+      setupPlugins();
     })
     .on('change', (file: string) => {
-      const fileName = path.basename(file);
-
-      if (watchFiles.includes(fileName)) {
-        setupPlugins();
+      if (!isPluginFile(file)) {
+        return;
       }
+
+      // console.log(`File ${file} has been changed`);
+
+      setupPlugins();
     })
     .on('unlink', (file: string) => {
-      const fileName = path.basename(file);
-
-      if (watchFiles.includes(fileName)) {
-        setupPlugins();
+      if (!isPluginFile(file)) {
+        return;
       }
+
+      // console.log(`File ${file} has been removed`);
+
+      setupPlugins();
     });
 
   process.on('SIGINT', () => {

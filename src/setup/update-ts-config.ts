@@ -17,8 +17,10 @@ const updateTsConfig = (): void => {
   const pluginsConfig = getPluginsConfig(path.join(selfRoot, selfBaseUrl));
 
   const selfTsConfigFile = path.join(selfRoot, 'tsconfig.json');
+  const sourceTsConfigFile = path.join(selfRoot, 'tsconfig.source.json');
+
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  const selfTsConfig = JSON.parse(fs.readFileSync(selfTsConfigFile, 'utf-8'));
+  const selfTsConfig = JSON.parse(fs.readFileSync(sourceTsConfigFile, 'utf-8'));
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   selfTsConfig.compilerOptions.paths = Object.keys(pluginsConfig).reduce<Record<string, string[]>>(
@@ -34,7 +36,15 @@ const updateTsConfig = (): void => {
     {},
   );
 
+  const pluginizrPath = path
+    .relative(selfBaseUrlPath, path.join(selfRoot, 'pluginizr'))
+    .replace(/\\/g, '/');
+
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+  selfTsConfig.compilerOptions.paths['~/pluginizr-loader/*'] = [`${pluginizrPath}/*`];
+
   fs.writeFileSync(selfTsConfigFile, JSON.stringify(selfTsConfig, null, 2));
+  console.log(`Updated ${selfTsConfigFile}`);
 };
 
 export default updateTsConfig;

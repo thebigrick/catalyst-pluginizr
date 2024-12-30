@@ -18,7 +18,7 @@
 - [Examples](#examples)
     - [Function Plugin](#function-plugin)
     - [Component Plugin](#component-plugin)
-    - [Non-Function Values Plugin](#non-function-values-plugin)
+    - [Value Plugin](#value-plugin)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -174,19 +174,19 @@ Catalyst Pluginizr allows you to enhance your application in three main ways:
 
 ### Plugin Types
 
-1. **Component Plugins** (will use `registerComponentPlugin`):
+1. **Component Plugins** (using `componentPlugin`):
     - Wrap React components with custom logic
     - Add UI elements (headers, footers, wrappers)
     - Modify component props or behavior
     - Access to the original component through `WrappedComponent`
 
-2. **Function Plugins** (will use `registerFunctionPlugin`):
+2. **Function Plugins** (using `functionPlugin`):
     - Modify function inputs and outputs
     - Add logging, analytics, or monitoring
     - Transform data before or after function execution
     - Access to original function and all its arguments
 
-3. **Value Plugins** (will use `registerValuePlugin`):
+3. **Value Plugins** (using `valuePlugin`):
     - Transform configuration values
     - Modify constants and defaults
     - Chain multiple transformations
@@ -202,12 +202,11 @@ Catalyst Pluginizr allows you to enhance your application in three main ways:
    cd plugins/my-first-plugin
    ```
 
-2. **Create basic configuration files for a typescript project:**
+2. **Create basic configuration files:**
 
    Sample `package.json` (adapt as needed):
 
    ```json
-   
    {
      "name": "my-first-plugin",
      "version": "1.0.0",
@@ -256,40 +255,35 @@ Catalyst Pluginizr allows you to enhance your application in three main ways:
    }
    ```
 
-3. **Implement your first plugin:**
+3. **Create your plugin:**
 
-   In this example, we'll create a simple header wrapper plugin that adds a promo banner above the header.
+   Each plugin should be in a separate file within the `plugins` directory at your package's baseUrl. The file must export a default value created using one of the plugin helper functions.
 
-   > While wrapping a component, you can access the original component through the `WrappedComponent` prop.
-
-   ```typescript jsx
-   // src/plugins/header-wrapper.tsx
-   import { ComponentPlugin } from "@thebigrick/catalyst-pluginizr";
-   import { Header } from "@bigcommerce/catalyst-core/components/header";
-   
-   export const headerWrapper: ComponentPlugin<typeof Header> = {
-       name: "header-wrapper",
-       resourceId: "@bigcommerce/catalyst-core/components/header:Header",
-       wrap: ({ WrappedComponent, ...props }) => (
-         <div className="w-full">
-           <div className="font-bold text-center">Special Offer Today!</div>
-           <WrappedComponent {...props} />
-         </div>
-       ),
-     }
-   ;
+   Example structure:
+   ```
+   my-first-plugin/
+   ├── src/
+   │   └── plugins/
+   │       ├── header-wrapper.tsx
+   │       ├── search-logger.ts
+   │       └── product-card-modifier.ts
    ```
 
-4. **Register your plugin in `src/register-plugins.ts`:**
-
-   > Please note that you need to register your plugin in the `register-plugins.ts` file to make it available at
-   runtime.
-
+   Example of a component plugin (`header-wrapper.tsx`):
    ```typescript
-   import { registerComponentPlugin } from "@thebigrick/catalyst-pluginizr";
-   import { headerWrapper } from "./plugins/header-wrapper";
+   import { componentPlugin } from "@thebigrick/catalyst-pluginizr";
+   import { Header } from "@bigcommerce/catalyst-core/components/header";
    
-   registerComponentPlugin(headerWrapper);
+   export default componentPlugin<typeof Header>({
+     name: "header-wrapper",
+     resourceId: "@bigcommerce/catalyst-core/components/header:Header",
+     wrap: ({ WrappedComponent, ...props }) => (
+       <div className="w-full">
+         <div className="font-bold text-center">Special Offer Today!</div>
+         <WrappedComponent {...props} />
+       </div>
+     ),
+   });
    ```
 
 ### Plugin Execution Order
@@ -304,21 +298,21 @@ Example of multiple plugins with order:
 
 ```typescript
 // First plugin (runs first)
-registerComponentPlugin({
+export default componentPlugin({
   name: "header-promo",
   sortOrder: -10,
   // ...
 });
 
-// Second plugin
-registerComponentPlugin({
+// In another file
+export default componentPlugin({
   name: "header-analytics",
   sortOrder: 0,
   // ...
 });
 
-// Third plugin (runs last)
-registerComponentPlugin({
+// In yet another file
+export default componentPlugin({
   name: "header-customization",
   sortOrder: 10,
   // ...
@@ -342,7 +336,7 @@ const configWrapper = (nextConfig) => {
 module.exports = configWrapper;
 ```
 
-### Naming Conventions and best practices
+### Naming Conventions and Best Practices
 
 Follow these conventions for plugin identification:
 
@@ -358,29 +352,23 @@ Follow these conventions for plugin identification:
         - For default exports `@bigcommerce/catalyst-core/components/header/cart-icon`
 
 3. **File Structure:**
-    - Keep related plugins in dedicated files
+    - Keep each plugin in a separate file within the `plugins` directory
     - Use consistent naming for plugin files
-    - Group plugins logically in directories
+    - Group plugins logically in subdirectories if needed
 
 ## Examples
 
 ### Function Plugin
 
-With function plugins, you can intercept and modify function calls.<br />
+With function plugins, you can intercept and modify function calls.
 
-> While wrapping a function, you can access the original function and its arguments.<br />
-> By not calling the original function, you can prevent its execution.<br />
->
-> **Please note that function plugin use `registerFunctionPlugin`.**
-
-Here's an example of a search term logger and modifier:
+Example of a search term logger (`search-term-logger.ts`):
 
 ```typescript
-import { registerFunctionPlugin } from "@thebigrick/catalyst-pluginizr";
+import { functionPlugin } from "@thebigrick/catalyst-pluginizr";
 import { getSearchResults } from "@bigcommerce/catalyst-core/components/header/_actions/get-search-results";
 
-// Logging plugin
-registerFunctionPlugin<typeof getSearchResults>({
+export default functionPlugin<typeof getSearchResults>({
   name: "search-term-logger",
   resourceId: "@bigcommerce/catalyst-core/components/header/_actions/get-search-results:getSearchResults",
   sortOrder: -10,
@@ -389,43 +377,21 @@ registerFunctionPlugin<typeof getSearchResults>({
     return fn(searchTerm);
   },
 });
-
-// Search term modifier
-registerFunctionPlugin<typeof getSearchResults>({
-  name: "search-term-modifier",
-  resourceId: "@bigcommerce/catalyst-core/components/header/_actions/get-search-results:getSearchResults",
-  sortOrder: 0,
-  wrap: (fn, searchTerm) => {
-    if (searchTerm === "test") {
-      return fn("Product Test");
-    }
-    return fn(searchTerm);
-  },
-});
 ```
 
 ### Component Plugin
 
-With component plugins, you can wrap React components with custom logic.<br />
+With component plugins, you can wrap React components with custom logic.
 
-> While wrapping a component, you can access the original component through the `WrappedComponent` prop.<br />
-> By not calling the original component, you can prevent its rendering.<br />
->
-> **Please note that function plugin use `registerComponentPlugin`.**
+Example of a header analytics plugin (`header-analytics.tsx`):
 
-Here's an example of a header wrapper and analytics plugin:
-
-```typescript jsx
-// plugins/header-wrapper.tsx
-import { ComponentPlugin } from "@thebigrick/catalyst-pluginizr";
-import React from "react";
+```typescript
+import { componentPlugin } from "@thebigrick/catalyst-pluginizr";
 import { Header } from "@bigcommerce/catalyst-core/components/header";
 
-// plugins/header-analytics.tsx
-const headerAnalyticsPlugin: ComponentPlugin<typeof Header> = {
+export default componentPlugin<typeof Header>({
   name: "header-analytics",
   resourceId: "@bigcommerce/catalyst-core/components/header:Header",
-  sortOrder: 0,
   wrap: ({ WrappedComponent, ...props }) => {
     return (
       <TrackedComponent>
@@ -433,49 +399,31 @@ const headerAnalyticsPlugin: ComponentPlugin<typeof Header> = {
       </TrackedComponent>
     );
   },
-};
-
-export default headerAnalyticsPlugin;
+});
 ```
 
-```typescript
-// register-plugins.ts
-import { registerComponentPlugin } from "@thebigrick/catalyst-pluginizr";
-import headerAnalyticsPlugin from "./plugins/header-analytics";
+### Value Plugin
 
-registerComponentPlugin(headerAnalyticsPlugin);
-```
+With value plugins, you can transform static values and configuration.
 
-### Non-Function Values Plugin
-
-With value plugins, you can transform static values and configuration.<br />
-
-> While wrapping a value, you can access the original value as parameter of `wrap` function.<br />
->
-> **Please note that value plugins use `registerValuePlugin`.**
-
-Here's an example of a currency plugin that adds the SKU to the product card fragment:
+Example of adding SKU to product card fragment (`product-card-sku.ts`):
 
 ```typescript
-import { registerValuePlugin } from "@thebigrick/catalyst-pluginizr";
+import { valuePlugin } from "@thebigrick/catalyst-pluginizr";
 import { PricingFragment } from '@bigcommerce/catalyst-core/client/fragments/pricing';
 import { ProductCardFragment } from "@bigcommerce/catalyst-core/components/product-card/fragment";
 import { graphql } from '@bigcommerce/catalyst-core/client/graphql';
 import { AddToCartFragment } from '@bigcommerce/catalyst-core/components/product-card/add-to-cart/fragment';
 
-// Query modifier with SKU
-registerValuePlugin<typeof ProductCardFragment>({
+export default valuePlugin<typeof ProductCardFragment>({
   name: "add-product-sku",
   resourceId: "@bigcommerce/catalyst-core/components/product-card/fragment:ProductCardFragment",
-  sortOrder: 0,
   wrap: (value) => {
-    console.log('My old fragment was:', value);
-
     return graphql(
       `
         fragment ProductCardFragment on Product {
          entityId
-         sku # <-- This was missing in the original query
+         sku # <-- Added SKU field
          name
          defaultImage {
            altText

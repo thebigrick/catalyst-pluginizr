@@ -5,6 +5,8 @@ import getPackageBaseUrl from '../config/get-package-base-url';
 import getPluginsConfig from '../config/get-plugins-config';
 import getSelfRoot from '../config/get-self-root';
 
+let tsConfigCache = '';
+
 /**
  * Update the tsconfig.json file with the plugin paths
  * @returns {void}
@@ -43,8 +45,14 @@ const updateTsConfig = (): void => {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   selfTsConfig.compilerOptions.paths['~/pluginizr-loader/*'] = [`${pluginizrPath}/*`];
 
-  fs.writeFileSync(selfTsConfigFile, JSON.stringify(selfTsConfig, null, 2));
-  console.log(`Updated ${selfTsConfigFile}`);
+  const selfTsConfigString = JSON.stringify(selfTsConfig, null, 2);
+
+  if (tsConfigCache !== selfTsConfigString) {
+    fs.writeFileSync(selfTsConfigFile, selfTsConfigString);
+    console.log(`Updated ${selfTsConfigFile}`);
+  }
+
+  tsConfigCache = selfTsConfigString;
 };
 
 export default updateTsConfig;

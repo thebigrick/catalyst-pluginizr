@@ -8,6 +8,9 @@ interface PluginizedComponent {
   plugins: Array<{ id: string; path: string }>;
 }
 
+// Cache for plugin content avoiding unnecessary file writes and loader invalidations
+const pluginsContentCache: Record<string, string> = {};
+
 /**
  * Creates the proxy file content with imports
  * @param {string} resourceId - The resource identifier
@@ -63,16 +66,20 @@ const generatePluginProxies = (): void => {
     const filename = `${pluginizedComponent.hash}.ts`;
     const filePath = path.join(generatedDir, filename);
 
-    const fileContent = createProxyContent(
-      resourceId,
-      pluginizedComponent.plugins.map((p) => p.id),
-    );
+    const pluginIds = pluginizedComponent.plugins.map((p) => p.id);
+    const serializedIds = JSON.stringify(pluginIds);
 
-    fs.writeFileSync(filePath, fileContent, 'utf-8');
+    if (pluginsContentCache[resourceId] !== serializedIds || !fs.existsSync(filePath)) {
+      const fileContent = createProxyContent(resourceId, pluginIds);
 
-    if (!existingPluginFiles.includes(filename)) {
-      console.log(`Generated proxy file for ${resourceId}: ${filename}`);
+      fs.writeFileSync(filePath, fileContent, 'utf-8');
+
+      if (!existingPluginFiles.includes(filename)) {
+        console.log(`Generated proxy file for ${resourceId}: ${filename}`);
+      }
     }
+
+    pluginsContentCache[resourceId] = serializedIds;
   });
 };
 

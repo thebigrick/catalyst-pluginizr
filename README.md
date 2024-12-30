@@ -119,32 +119,15 @@ If you prefer to install manually or need more control over the installation pro
 
    ```javascript
    // Add the following line at the beginning of the file
-   const withPluginizrTailwind = require('@thebigrick/catalyst-pluginizr/pluginizr/with-pluginizr-tailwind');
+   const withTailwindPluginizr = require('@thebigrick/catalyst-pluginizr/with-tailwind-pluginizr');
    
    // ... (leave the main content as is)
    
    // Replace the default module.exports line at the end with the following:
-   module.exports = withPluginizrTailwind(config);
+   module.exports = withTailwindPluginizr(config);
    ```
 
-6. Add the pluginizr path to your `core/tsconfig.json` in the `compilerOptions.paths` section, just after the `~/*` definition:
-
-   ```json
-   {
-     "compilerOptions": {
-       "paths": {
-         "~/*": [
-           "./*"
-         ],
-         "@thebigrick/catalyst-pluginizr/*": [
-           "../packages/catalyst-pluginizr/src/*"
-         ]
-       }
-     }
-   }
-   ```
-
-7. Install dependencies:
+6. Install dependencies:
 
    ```bash
    cd /path-to-catalyst

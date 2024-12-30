@@ -254,6 +254,7 @@ Catalyst Pluginizr allows you to enhance your application in three main ways:
 
    Example of a component plugin (`header-wrapper.tsx`):
    ```typescript
+   import React from "react";
    import { componentPlugin } from "@thebigrick/catalyst-pluginizr";
    import { Header } from "@bigcommerce/catalyst-core/components/header";
    
@@ -369,6 +370,7 @@ With component plugins, you can wrap React components with custom logic.
 Example of a header analytics plugin (`header-analytics.tsx`):
 
 ```typescript
+import React from "react";
 import { componentPlugin } from "@thebigrick/catalyst-pluginizr";
 import { Header } from "@bigcommerce/catalyst-core/components/header";
 

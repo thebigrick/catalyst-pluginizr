@@ -27,7 +27,7 @@ const withCatalystPluginizr = (nextConfig: NextConfig): NextConfig => {
     };
   }, {});
 
-  const pluginPackages = Object.keys(pluginsConfig);
+  // const pluginPackages = Object.keys(pluginsConfig);
 
   if (nextConfig.experimental?.turbo) {
     console.log(
@@ -66,7 +66,7 @@ const withCatalystPluginizr = (nextConfig: NextConfig): NextConfig => {
 
   return composeNextConfig(pluginsConfig, {
     ...nextConfig,
-    transpilePackages: [...(nextConfig.transpilePackages || []), ...pluginPackages],
+    // transpilePackages: [...(nextConfig.transpilePackages || []), ...pluginPackages],
     webpack: (config: any, context: WebpackConfigContext) => {
       if (typeof nextConfig.webpack === 'function') {
         config = nextConfig.webpack(config, context);
@@ -88,12 +88,6 @@ const withCatalystPluginizr = (nextConfig: NextConfig): NextConfig => {
         ],
         enforce: 'pre',
       });
-
-      // config.plugins.push(
-      //   new context.webpack.NormalModuleReplacementPlugin(/^node:/, (resource) => {
-      //     resource.request = resource.request.replace(/^node:/, '');
-      //   }),
-      // );
 
       return config;
     },

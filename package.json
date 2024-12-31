@@ -21,9 +21,17 @@
   },
   "author": "Riccardo Tempesta <riccardo.tempesta@bigcommerce.com>",
   "license": "MIT",
-  "dependencies": {
-    "react": "^18.3.1",
-    "next": "^15.0.3"
+  "peerDependencies": {
+    "react": "*",
+    "next": "*"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": false
+    },
+    "next": {
+      "optional": false
+    }
   },
   "devDependencies": {
     "glob": "^11.0.0",

@@ -3,7 +3,7 @@ const withTailwindPluginizr = (tailwindConfig = {}) => {
     ...tailwindConfig,
     content: [
       ...(tailwindConfig.content || []),
-      '../plugins/**/*.{ts,tsx}',
+      '../plugins/**/*.{ts,tsx,css,scss}',
       '!../plugins/**/node_modules/**',
     ],
   };

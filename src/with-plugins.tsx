@@ -100,20 +100,17 @@ export const withFunctionPlugins = <T extends PluginWrappedFunction = PluginWrap
 ): T => {
   const validPlugins = filterValidPlugins<FunctionPlugin<T>>(plugins, EPluginType.Function);
 
-  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-  return ((...args: Args<T>): ReturnType<T> => {
-    if (validPlugins.length === 0) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-      return wrapped(...args);
-    }
+  if (validPlugins.length === 0) {
+    return wrapped;
+  }
 
-    // @ts-expect-error TS doesn't like the reduce here
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-    return validPlugins.reduce<T>((acc, plugin) => {
+  return validPlugins.reduce((acc, plugin) => {
+    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+    return ((...args: Args<T>) => {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-      return (...pluginArgs: Args<T>) => plugin.wrap(acc, ...pluginArgs);
-    }, wrapped)(...args);
-  }) as T;
+      return plugin.wrap(acc, ...args);
+    }) as T;
+  }, wrapped);
 };
 
 /**

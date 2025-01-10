@@ -93,9 +93,6 @@ const installCatalystPluginizr = () => {
     fs.copyFileSync(tsconfigSourcePath, tsconfigDestPath);
     console.log('✓ Copied tsconfig.source.json to tsconfig.json');
 
-    setupPlugins();
-    console.log('✓ Updated tsconfig.json');
-
     if (!fs.existsSync(path.join(catalystRoot, 'plugins'))) {
       fs.mkdirSync(path.join(catalystRoot, 'plugins'));
       console.log('✓ Created plugins directory');

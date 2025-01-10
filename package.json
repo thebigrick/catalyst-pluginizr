@@ -11,7 +11,7 @@
     "./generated/*": "./src/generated/*.ts"
   },
   "scripts": {
-    "build": "npx tsx src/scripts/setup.ts && npx tsx src/scripts/build.ts",
+    "build": "npx tsx src/scripts/setup.ts",
     "dev": "npx tsx src/scripts/run-dev.ts",
     "setup": "npx tsx src/scripts/setup.ts",
     "clean": "npx tsx src/scripts/clean.ts",

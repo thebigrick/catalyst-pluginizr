@@ -2,6 +2,7 @@
 import { exec } from 'child_process';
 import fs from 'fs';
 import path from 'path';
+import setupPlugins from "../setup/setup-plugins";
 
 const installCatalystPluginizr = () => {
   const catalystRoot = path.resolve(__dirname, '../../../../');
@@ -92,6 +93,9 @@ const installCatalystPluginizr = () => {
     fs.copyFileSync(tsconfigSourcePath, tsconfigDestPath);
     console.log('✓ Copied tsconfig.source.json to tsconfig.json');
 
+    setupPlugins();
+    console.log('✓ Updated tsconfig.json');
+
     if (!fs.existsSync(path.join(catalystRoot, 'plugins'))) {
       fs.mkdirSync(path.join(catalystRoot, 'plugins'));
       console.log('✓ Created plugins directory');
@@ -103,10 +107,6 @@ const installCatalystPluginizr = () => {
     exec('pnpm install', { cwd: catalystRoot });
 
     console.log('✅ Catalyst Pluginizr installation completed successfully!');
-    console.log('\nNext steps:');
-    console.log('1. Create your first plugin in the plugins directory');
-    console.log('2. Register your plugins');
-    console.log('3. Start developing!');
   } catch (error) {
     console.error('❌ Installation failed:', error);
     throw error;
@@ -114,3 +114,4 @@ const installCatalystPluginizr = () => {
 };
 
 installCatalystPluginizr();
+

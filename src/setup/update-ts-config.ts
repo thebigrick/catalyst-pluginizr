@@ -49,7 +49,6 @@ const updateTsConfig = (): void => {
 
   if (tsConfigCache !== selfTsConfigString) {
     fs.writeFileSync(selfTsConfigFile, selfTsConfigString);
-    console.log(`Updated ${selfTsConfigFile}`);
   }
 
   tsConfigCache = selfTsConfigString;

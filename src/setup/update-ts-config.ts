@@ -43,7 +43,7 @@ const updateTsConfig = (): void => {
     .replace(/\\/g, '/');
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-  selfTsConfig.compilerOptions.paths['~/pluginizr-loader/*'] = [`${pluginizrPath}/*`];
+  selfTsConfig.compilerOptions.paths['@pluginizr-loader/*'] = [`${pluginizrPath}/*`];
 
   const selfTsConfigString = JSON.stringify(selfTsConfig, null, 2);
 

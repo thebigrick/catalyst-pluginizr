@@ -1,6 +1,7 @@
-import { getPluginizedComponents } from '@pluginizr-loader/get-pluginized-components';
 import fs from 'node:fs';
 import path from 'node:path';
+
+import { getPluginizedComponents } from '~/pluginizr-loader/get-pluginized-components';
 
 interface PluginizedComponent {
   hash: string;

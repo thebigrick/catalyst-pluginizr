@@ -2,7 +2,6 @@
 import { exec } from 'child_process';
 import fs from 'fs';
 import path from 'path';
-import setupPlugins from "../setup/setup-plugins";
 
 const installCatalystPluginizr = () => {
   const catalystRoot = path.resolve(__dirname, '../../../../');
@@ -14,13 +13,22 @@ const installCatalystPluginizr = () => {
     const corePackageJsonPath = path.join(catalystRoot, 'core', 'package.json');
     const corePackageJson = JSON.parse(fs.readFileSync(corePackageJsonPath, 'utf-8'));
 
-    corePackageJson.dependencies = {
-      ...corePackageJson.dependencies,
-      '@thebigrick/catalyst-pluginizr': 'workspace:*',
-    };
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    const hasPluginizrDependency = Object.keys(corePackageJson.dependencies).some(
+      (dependency) => dependency === '@thebigrick/catalyst-pluginizr',
+    );
 
-    fs.writeFileSync(corePackageJsonPath, JSON.stringify(corePackageJson, null, 2));
-    console.log('✓ Updated core/package.json');
+    if (!hasPluginizrDependency) {
+      corePackageJson.dependencies = {
+        ...corePackageJson.dependencies,
+        '@thebigrick/catalyst-pluginizr': 'workspace:*',
+      };
+
+      fs.writeFileSync(corePackageJsonPath, JSON.stringify(corePackageJson, null, 2));
+      console.log('✓ Updated core/package.json');
+    } else {
+      console.log('✓ Pluginizr dependency already exists in core/package.json');
+    }
 
     const workspaceYamlPath = path.join(catalystRoot, 'pnpm-workspace.yaml');
     const workspaceYaml = fs.readFileSync(workspaceYamlPath, 'utf-8');
@@ -54,9 +62,7 @@ const installCatalystPluginizr = () => {
     const tailwindConfigPath = path.join(catalystRoot, 'core', 'tailwind.config.js');
     let tailwindConfig = fs.readFileSync(tailwindConfigPath, 'utf-8');
 
-    if (
-      !tailwindConfig.includes('@thebigrick/catalyst-pluginizr/with-tailwind-pluginizr')
-    ) {
+    if (!tailwindConfig.includes('@thebigrick/catalyst-pluginizr/with-tailwind-pluginizr')) {
       const tailwindPluginizrImport =
         "const withTailwindPluginizr = require('@thebigrick/catalyst-pluginizr/with-tailwind-pluginizr');\n";
 
@@ -100,8 +106,10 @@ const installCatalystPluginizr = () => {
       console.log('✓ Plugins directory already exists');
     }
 
-    console.log('📦 Installing dependencies...');
-    exec('pnpm install', { cwd: catalystRoot });
+    if (!hasPluginizrDependency) {
+      console.log('📦 Installing dependencies...');
+      exec('pnpm install', {cwd: catalystRoot});
+    }
 
     console.log('✅ Catalyst Pluginizr installation completed successfully!');
   } catch (error) {
@@ -111,4 +119,3 @@ const installCatalystPluginizr = () => {
 };
 
 installCatalystPluginizr();
-

@@ -105,7 +105,7 @@ const installCatalystPluginizr = () => {
     console.log('✅ Catalyst Pluginizr installation completed successfully!');
     console.log('\nNext steps:');
     console.log('1. Create your first plugin in the plugins directory');
-    console.log('2. Register your plugin in src/register-plugins.ts');
+    console.log('2. Register your plugins');
     console.log('3. Start developing!');
   } catch (error) {
     console.error('❌ Installation failed:', error);

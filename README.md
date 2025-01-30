@@ -55,6 +55,7 @@ instructions.
    ```bash
    cd /path-to-catalyst
    git submodule add https://github.com/thebigrick/catalyst-pluginizr.git packages/catalyst-pluginizr
+   pnpm i
    ```
 
 2. Run the installation script:

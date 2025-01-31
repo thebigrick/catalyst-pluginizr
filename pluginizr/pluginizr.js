@@ -21,28 +21,6 @@ const CACHE = {
 };
 
 /**
- * @typedef {Object} PluginImport
- * @property {Object} importDecl - The import declaration node
- * @property {Object} identifier - The identifier node
- */
-
-/**
- * @typedef {Object} ProjectInfo
- * @property {string} packageJsonPath - Path to package.json
- * @property {string} packageName - Name of the package
- * @property {string|null} tsconfigPath - Path to tsconfig.json if exists
- * @property {string|null} baseUrl - Base URL from tsconfig
- * @property {string} projectRoot - Project root directory
- */
-
-/**
- * @typedef {Object} TransformResult
- * @property {Object} node - The transformed AST node
- * @property {PluginImport[]} imports - Array of imports required for the transformation
- */
-
-// File System Operations
-/**
  * Searches for a file by walking up the directory tree from a starting point.
  * @param {string} filename - The name of the file to find
  * @param {string} startDir - The directory to start searching from
@@ -97,7 +75,6 @@ const getBaseUrl = (tsconfigPath) => {
   return CACHE.tsConfigBaseUrl[tsconfigPath];
 };
 
-// Path Operations
 /**
  * Removes file extension from path.
  * @param {string} filePath - File path with extension
@@ -172,7 +149,6 @@ const getComponentCode = (filename, identifierName, isDefaultExport = false) => 
     : `${info.packageName}/${relativePathNoExt}:${identifierName}`;
 };
 
-// AST Analysis and Transformation
 /**
  * Determines if a function node represents a React component.
  * @param {Object} funcNode - The function node to analyze
@@ -344,7 +320,6 @@ const wrapExportedValue = (node, identifierName, filename, isDefaultExport, load
   };
 };
 
-// Export Handlers
 /**
  * Creates declarations for destructured variables.
  * @param {Object} temp - Temporary variable identifier
@@ -610,12 +585,38 @@ const handleDirectExport = (
  * @returns {boolean} True if changes were made
  */
 const handleExport = (ast, decl, filename, isDefaultExport, loader, imports) => {
+  // Handle indirect exports (export { ... })
   if (decl.node.specifiers?.length > 0 && !decl.node.declaration) {
     let modified = false;
     const bindings = groupSpecifiersByBinding(decl.node.specifiers, decl.scope);
 
     for (const [bindingPath, items] of bindings) {
       if (handleDestructuredExport(bindingPath, items, decl, filename, loader, imports)) {
+        modified = true;
+        continue;
+      }
+
+      // Handle non-destructured indirect exports
+      for (const { specifier, binding } of items) {
+        const declarator = binding.path.node;
+
+        if (!t.isVariableDeclarator(declarator)) continue;
+
+        const result = wrapExportedValue(
+          declarator.init,
+          specifier.exported.name,
+          filename,
+          isDefaultExport,
+          loader,
+        );
+
+        if (!result) continue;
+
+        if (result.imports?.[0]) {
+          imports.add(result.imports[0].importDecl);
+        }
+
+        declarator.init = result.node;
         modified = true;
       }
     }

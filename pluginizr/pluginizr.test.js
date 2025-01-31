@@ -204,6 +204,23 @@ describe('pluginizr', () => {
       const result = pluginizr(sampleCode, '/some/MyComponent.tsx', mockLoader);
       expect(result).toContain('withComponentPlugins');
     });
+
+    test('should handle indirect export of React component', () => {
+      const sampleCode = `
+        const NamedComponent = ({ title }) => {
+          return <div>{title}</div>;
+        };
+        NamedComponent.displayName = 'NamedComponent';
+        export { NamedComponent };
+      `;
+
+      const result = pluginizr(sampleCode, '/some/MyComponent.tsx', mockLoader);
+
+      expect(result).toContain('import { withComponentPlugins, withFunctionPlugins, withValuePlugins } from "@thebigrick/catalyst-pluginizr"');
+      expect(result).toContain('import plugin_hash2 from "@thebigrick/catalyst-pluginizr/generated/plugin_hash2"');
+      expect(result).toContain('const NamedComponent = withComponentPlugins(plugin_hash2');
+      expect(result).toContain('NamedComponent.displayName = \'NamedComponent\';');
+    });
   });
 
   describe('withFunctionPlugins', () => {

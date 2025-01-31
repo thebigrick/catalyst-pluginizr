@@ -311,6 +311,18 @@ describe('pluginizr', () => {
           '  return \'World\';\n' +
           '});');
     });
+
+    test('should handle destructuring exports', () => {
+      const sampleCode = `
+        const { func1, func2 } = myFn();
+        export { func1, func2 };
+      `;
+
+      const result = pluginizr(sampleCode, '/some/myFunction.ts', mockLoader);
+      expect(result).toContain('const _temp = myFn();');
+      expect(result).toContain('const func1 = withValuePlugins(plugin_hash3a, _temp.func1);');
+      expect(result).toContain('const func2 = withValuePlugins(plugin_hash3b, _temp.func2);');
+    });
   });
 
   describe('withValuePlugins', () => {

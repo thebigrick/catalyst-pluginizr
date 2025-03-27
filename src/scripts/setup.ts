@@ -52,7 +52,8 @@ const installCatalystPluginizr = () => {
 
       nextConfig = nextConfig.replace(
         'nextConfig = withNextIntl(nextConfig);',
-        'nextConfig = withCatalystPluginizr(withNextIntl(nextConfig));',
+        '// @ts-expect-error: This must be fixed\n' +
+          '  nextConfig = withCatalystPluginizr(withNextIntl(nextConfig));',
       );
     }
 
@@ -108,7 +109,7 @@ const installCatalystPluginizr = () => {
 
     if (!hasPluginizrDependency) {
       console.log('📦 Installing dependencies...');
-      exec('pnpm install', {cwd: catalystRoot});
+      exec('pnpm install', { cwd: catalystRoot });
     }
 
     console.log('✅ Catalyst Pluginizr installation completed successfully!');

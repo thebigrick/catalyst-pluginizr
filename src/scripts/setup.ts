@@ -52,8 +52,7 @@ const installCatalystPluginizr = () => {
 
       nextConfig = nextConfig.replace(
         'nextConfig = withNextIntl(nextConfig);',
-        '// @ts-expect-error: This must be fixed\n' +
-          '  nextConfig = withCatalystPluginizr(withNextIntl(nextConfig));',
+        'nextConfig = withCatalystPluginizr(withNextIntl(nextConfig));',
       );
     }
 

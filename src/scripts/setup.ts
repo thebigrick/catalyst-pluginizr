@@ -60,21 +60,26 @@ const installCatalystPluginizr = () => {
     console.log('✓ Updated next.config.ts');
 
     const tailwindConfigPath = path.join(catalystRoot, 'core', 'tailwind.config.js');
-    let tailwindConfig = fs.readFileSync(tailwindConfigPath, 'utf-8');
 
-    if (!tailwindConfig.includes('@thebigrick/catalyst-pluginizr/with-tailwind-pluginizr')) {
-      const tailwindPluginizrImport =
-        "const withTailwindPluginizr = require('@thebigrick/catalyst-pluginizr/with-tailwind-pluginizr');\n";
+    if (fs.existsSync(tailwindConfigPath)) {
+      console.warn('Using legacy tailwind.config.js plugin');
 
-      tailwindConfig = tailwindPluginizrImport + tailwindConfig;
+      let tailwindConfig = fs.readFileSync(tailwindConfigPath, 'utf-8');
 
-      tailwindConfig = tailwindConfig.replace(
-        'module.exports = config;',
-        'module.exports = withTailwindPluginizr(config);',
-      );
+      if (!tailwindConfig.includes('@thebigrick/catalyst-pluginizr/with-tailwind-pluginizr')) {
+        const tailwindPluginizrImport =
+          "const withTailwindPluginizr = require('@thebigrick/catalyst-pluginizr/with-tailwind-pluginizr');\n";
 
-      fs.writeFileSync(tailwindConfigPath, tailwindConfig);
-      console.log('✓ Updated tailwind.config.js');
+        tailwindConfig = tailwindPluginizrImport + tailwindConfig;
+
+        tailwindConfig = tailwindConfig.replace(
+          'module.exports = config;',
+          'module.exports = withTailwindPluginizr(config);',
+        );
+
+        fs.writeFileSync(tailwindConfigPath, tailwindConfig);
+        console.log('✓ Updated tailwind.config.js');
+      }
     }
 
     // const tsconfigPath = path.join(catalystRoot, 'core', 'tsconfig.json');

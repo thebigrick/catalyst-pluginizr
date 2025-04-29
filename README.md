@@ -116,7 +116,7 @@ If you prefer to install manually or need more control over the installation pro
    // ... (leave the content as is)
    ```
 
-5. Configure tailwind to use pluginizr in `core/tailwind.config.js`:
+5. Configure tailwind to use pluginizr in `core/tailwind.config.js` (**only legacy versions of Catalyst**):
 
    ```javascript
    // Add the following line at the beginning of the file

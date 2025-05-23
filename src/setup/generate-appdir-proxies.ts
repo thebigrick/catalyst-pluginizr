@@ -139,17 +139,16 @@ const getAppdirPluginContent = (plugin: AppDirPlugin): { pluginizr: string; core
 // Generated file for ${plugin.resourceId}
 // DO NOT EDIT MANUALLY
 
-import AppDirPlugin from '${plugin.resourceId}';
-
-export default AppDirPlugin;
+export * from '${plugin.resourceId}';
+export { default } from '${plugin.resourceId}';
 `;
 
   const core = `/* eslint-disable */
 // Generated file for ${plugin.resourceId}
 // DO NOT EDIT MANUALLY
 
-import AppDirPlugin from '${plugin.pluginizrResourceId}';
-export default AppDirPlugin;
+export * from '${plugin.pluginizrResourceId}';
+export { default } from '${plugin.pluginizrResourceId}';
 `;
 
   return { pluginizr, core };

@@ -40,8 +40,7 @@ const generatePluginProxies = (): void => {
   // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
   const pluginizedComponents = getPluginizedComponents() as Record<string, PluginizedComponent>;
 
-  // Create generated directory if it doesn't exist
-  const generatedDir = path.resolve(__dirname, '../generated');
+  const generatedDir = path.resolve(__dirname, '../generated/plugins');
 
   if (!fs.existsSync(generatedDir)) {
     fs.mkdirSync(generatedDir, { recursive: true });
@@ -61,7 +60,6 @@ const generatePluginProxies = (): void => {
       console.log(`Removed old proxy file: ${f}`);
     });
 
-  // Generate a proxy file for each resource
   Object.entries(pluginizedComponents).forEach(([resourceId, pluginizedComponent]) => {
     const filename = `${pluginizedComponent.hash}.ts`;
     const filePath = path.join(generatedDir, filename);

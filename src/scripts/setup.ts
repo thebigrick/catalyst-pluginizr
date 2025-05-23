@@ -62,7 +62,7 @@ const installCatalystPluginizr = () => {
     const tailwindConfigPath = path.join(catalystRoot, 'core', 'tailwind.config.js');
 
     if (fs.existsSync(tailwindConfigPath)) {
-      console.warn('Using legacy tailwind.config.js plugin');
+      console.warn('!! Using legacy tailwind.config.js plugin');
 
       let tailwindConfig = fs.readFileSync(tailwindConfigPath, 'utf-8');
 

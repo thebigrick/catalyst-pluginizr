@@ -22,8 +22,12 @@ const runDev = (): void => {
     },
   });
 
-  const isPluginFile = (file: string): boolean =>
-    /\/plugins\/[^/]+\.tsx?/.exec(file.replace(/\\/g, '/')) !== null;
+  const isPluginFile = (file: string): boolean => {
+    return (
+      /\/plugins\/[^/]+\.tsx?/.exec(file.replace(/\\/g, '/')) !== null ||
+      /\/appdir\/[^/]+\.tsx?/.exec(file.replace(/\\/g, '/')) !== null
+    );
+  };
 
   watcher
     .on('add', (file: string) => {

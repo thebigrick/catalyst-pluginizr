@@ -31,12 +31,12 @@ const readJsonFile = (filePath) => {
 
 /**
  * Gets package name and tsconfig baseUrl for a module
- * @param {string} moduleDir - Module directory path
+ * @param {string} pluginFile - Module directory path
  * @returns {Object} Module configuration
  */
-const getModuleConfig = (moduleDir) => {
-  const packageJson = readJsonFile(path.join(moduleDir, '../../package.json'));
-  const tsconfig = readJsonFile(path.join(moduleDir, '../../tsconfig.json'));
+const getModuleConfigForPluginFile = (pluginFile) => {
+  const packageJson = readJsonFile(path.join(pluginFile, '../../package.json'));
+  const tsconfig = readJsonFile(path.join(pluginFile, '../../tsconfig.json'));
 
   return {
     packageName: packageJson?.name,
@@ -75,7 +75,7 @@ const getPluginizedComponents = () => {
     pluginFiles.forEach((file) => {
       try {
         const moduleDir = path.dirname(file);
-        const { packageName } = getModuleConfig(moduleDir);
+        const { packageName } = getModuleConfigForPluginFile(moduleDir);
 
         if (!packageName) return;
 

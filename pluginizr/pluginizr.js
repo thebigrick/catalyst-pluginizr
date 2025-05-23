@@ -208,7 +208,7 @@ const createPluginModuleImport = (pluginInfo) => {
   const identifier = t.identifier(pluginInfo.hash);
   const importDecl = t.importDeclaration(
     [t.importDefaultSpecifier(identifier)],
-    t.stringLiteral(`@thebigrick/catalyst-pluginizr/generated/${pluginInfo.hash}`),
+    t.stringLiteral(`@thebigrick/catalyst-pluginizr/generated/plugins/${pluginInfo.hash}`),
   );
 
   return { importDecl, identifier };
@@ -271,7 +271,10 @@ const findPropertyForName = (pattern, name) => {
 const wrapExportedValue = (node, identifierName, filename, isDefaultExport, loader) => {
   const componentCode = getComponentCode(filename, identifierName, isDefaultExport);
   const pluginizedComponents = getPluginizedComponents();
-  const pluginFile = path.resolve(__dirname, `../src/generated/${getPluginHash(componentCode)}.ts`);
+  const pluginFile = path.resolve(
+    __dirname,
+    `../src/generated/plugins/${getPluginHash(componentCode)}.ts`,
+  );
 
   // Add dependencies
   loader.addDependency(pluginFile);
